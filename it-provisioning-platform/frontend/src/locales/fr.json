@@ -1,0 +1,10 @@
+{
+	"app": {
+		"title": "Plateforme de Provisionnement TI"
+	},
+	"backend_status": {
+		"loading": "Chargement...",
+		"failed": "La connexion au backend a échoué.",
+		"message": "Le backend dit : {message}"
+	}
+}

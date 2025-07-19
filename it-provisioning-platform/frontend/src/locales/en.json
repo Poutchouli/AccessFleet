@@ -1,0 +1,10 @@
+{
+	"app": {
+		"title": "IT Provisioning Platform"
+	},
+	"backend_status": {
+		"loading": "Loading...",
+		"failed": "Failed to connect to backend.",
+		"message": "Backend says: {message}"
+	}
+}
