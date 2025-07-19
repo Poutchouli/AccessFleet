@@ -3,6 +3,8 @@
 	let accounts = [];
 	let message = '';
 	let isLoading = false;
+	let showCommandModal = false;
+	let commandToRun = '';
 
 	// This is the command the application will show to the admin
 	const powershellCommand = `Get-ADGroupMember -Identity "Your-Temp-Accounts-Group" | Select-Object displayName, userPrincipalName | Export-Csv -Path "C:\\temp\\temp_accounts.csv" -NoTypeInformation`;
@@ -39,6 +41,27 @@
 		}
 	}
 
+	async function toggleInUseStatus(account) {
+		const newStatus = !account.is_in_use;
+		try {
+			const response = await fetch(`/api/admin/temp-accounts/${account.id}/status?is_in_use=${newStatus}`, {
+				method: 'PUT'
+			});
+			const result = await response.json();
+			if (!response.ok) throw new Error(result.detail);
+
+			// Update the UI with the data from the backend response
+			accounts = accounts.map(a => a.id === account.id ? result.updated_account : a);
+			
+			// Show the command in a modal
+			commandToRun = result.powershell_command;
+			showCommandModal = true;
+
+		} catch (error) {
+			alert(`Error: ${error.message}`);
+		}
+	}
+
 	onMount(fetchAccounts);
 </script>
 
@@ -60,19 +83,41 @@
 <h3>Cached TEMP Accounts</h3>
 <table>
 	<thead>
-		<tr><th>ID</th><th>Display Name</th><th>User Principal Name</th><th>In Use?</th></tr>
+		<tr>
+			<th>ID</th>
+			<th>Display Name</th>
+			<th>User Principal Name</th>
+			<th>In Use?</th>
+			<th>Action</th>
+		</tr>
 	</thead>
 	<tbody>
-		{#each accounts as acc}
+		{#each accounts as acc (acc.id)}
 			<tr>
 				<td>{acc.id}</td>
 				<td>{acc.display_name}</td>
 				<td>{acc.user_principal_name}</td>
-				<td>{acc.is_in_use}</td>
+				<td>{acc.is_in_use ? 'Yes' : 'No'}</td>
+				<td>
+					<button on:click={() => toggleInUseStatus(acc)}>
+						{acc.is_in_use ? 'Mark as Available' : 'Mark as In Use'}
+					</button>
+				</td>
 			</tr>
 		{/each}
 	</tbody>
 </table>
+
+{#if showCommandModal}
+<div class="modal-backdrop" on:click={() => showCommandModal = false}>
+	<div class="modal" on:click|stopPropagation>
+		<h4>PowerShell Command Generated</h4>
+		<p>Run the following command in your PowerShell console to apply the change in Active Directory.</p>
+		<textarea readonly>{commandToRun}</textarea>
+		<button on:click={() => showCommandModal = false}>Close</button>
+	</div>
+</div>
+{/if}
 
 <style>
 	.workflow-box {
@@ -98,5 +143,44 @@
 	}
 	th {
 		background-color: #f2f2f2;
+	}
+	button {
+		background-color: #0066cc;
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		cursor: pointer;
+		border-radius: 3px;
+	}
+	button:hover {
+		background-color: #0052a3;
+	}
+	.modal-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 1000;
+	}
+	.modal {
+		background-color: white;
+		padding: 2rem;
+		border-radius: 5px;
+		width: 80%;
+		max-width: 600px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	}
+	.modal textarea {
+		height: 100px;
+		resize: vertical;
+		margin: 1rem 0;
+	}
+	.modal button {
+		margin-top: 1rem;
 	}
 </style>

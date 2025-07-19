@@ -180,3 +180,44 @@ async def upload_temp_accounts_csv(file: UploadFile = File(...), db: Session = D
         return {"message": f"Sync complete. Added: {synced_count}, Updated: {updated_count}."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {e}")
+
+@app.put("/admin/temp-accounts/{account_id}/status", response_model=dict)
+def update_temp_account_status(
+    account_id: int, 
+    is_in_use: bool, 
+    db: Session = Depends(get_db)
+):
+    account = db.query(models.TempAccount).filter(models.TempAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    # Update our local database
+    setattr(account, 'is_in_use', is_in_use)
+    db.commit()
+    db.refresh(account)
+
+    # Generate the corresponding PowerShell command
+    # NOTE: We assume 'disabling' an account is how we mark it "in use"
+    # and 'enabling' it makes it "available".
+    ps_enabled_status = "$false" if is_in_use else "$true"
+    description = f"'In Use by system'" if is_in_use else "'Available'"
+    
+    command = (
+        f"Set-ADUser -Identity '{account.user_principal_name}' "
+        f"-Enabled {ps_enabled_status} "
+        f"-Description {description}"
+    )
+
+    # Convert the updated account to a dict for the response
+    updated_account_data = {
+        "id": account.id,
+        "user_principal_name": account.user_principal_name,
+        "display_name": account.display_name,
+        "is_in_use": account.is_in_use
+    }
+
+    return {
+        "message": "Database updated successfully.",
+        "powershell_command": command,
+        "updated_account": updated_account_data
+    }
