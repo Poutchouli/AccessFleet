@@ -1,5 +1,9 @@
-from sqlalchemy import Column, Integer, String, Enum as SQLAlchemyEnum, ForeignKey, Boolean
+from sqlalchemy import (
+    Boolean, Column, Integer, String, Enum as SQLAlchemyEnum, 
+    ForeignKey, DateTime, Text
+)
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql import func
 from database import Base
 import enum
 
@@ -36,6 +40,7 @@ class Request(Base):
     id = Column(Integer, primary_key=True, index=True)
     status = Column(SQLAlchemyEnum(RequestStatus), default=RequestStatus.pending)
     form_data = Column(JSONB)  # Stores the user's answers
+    walkthrough_state = Column(JSONB, nullable=True)  # To store checklist progress
     
     submitted_by_manager_id = Column(Integer, ForeignKey("users.id"))
     processed_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -48,3 +53,20 @@ class TempAccount(Base):
     user_principal_name = Column(String, unique=True, index=True)
     display_name = Column(String, index=True)
     is_in_use = Column(Boolean, default=False)  # Track if account is currently assigned
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    actor_id = Column(Integer, ForeignKey("users.id"))
+    event_type = Column(String, index=True)
+    details = Column(JSONB)  # To store flexible event data
+
+class WalkthroughTemplate(Base):
+    __tablename__ = "walkthrough_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    description = Column(String)
+    steps = Column(JSONB)

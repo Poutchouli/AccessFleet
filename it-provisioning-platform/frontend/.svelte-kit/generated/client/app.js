@@ -11,21 +11,23 @@ export const nodes = [
 	() => import('./nodes/7'),
 	() => import('./nodes/8'),
 	() => import('./nodes/9'),
-	() => import('./nodes/10')
+	() => import('./nodes/10'),
+	() => import('./nodes/11')
 ];
 
 export const server_loads = [];
 
 export const dictionary = {
 		"/": [2],
-		"/admin/dashboard": [3],
-		"/admin/forms": [4],
-		"/admin/forms/builder": [6],
-		"/admin/forms/[id]": [5],
-		"/admin/temp-accounts": [7],
-		"/requests": [8],
-		"/requests/new": [9],
-		"/users": [10]
+		"/admin/audit": [3],
+		"/admin/dashboard": [4],
+		"/admin/forms": [5],
+		"/admin/forms/builder": [7],
+		"/admin/forms/[id]": [6],
+		"/admin/temp-accounts": [8],
+		"/requests": [9],
+		"/requests/new": [10],
+		"/users": [11]
 	};
 
 export const hooks = {

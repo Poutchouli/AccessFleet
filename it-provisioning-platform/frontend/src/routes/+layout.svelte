@@ -39,6 +39,7 @@
 		<a href="/admin/dashboard">Admin: Dashboard</a>
 		<a href="/admin/forms">Admin: Forms</a>
 		<a href="/admin/temp-accounts">Admin: TEMP Accounts</a>
+		<a href="/admin/audit">Admin: Audit Log</a>
 
 		<div class="controls">
 			{#if $commandQueue.length > 0}

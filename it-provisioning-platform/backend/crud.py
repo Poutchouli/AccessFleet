@@ -62,3 +62,34 @@ def create_temp_account(db: Session, account: schemas.TempAccountCreate):
     db.commit()
     db.refresh(db_account)
     return db_account
+
+def create_audit_log(db: Session, *, actor_id: int, event_type: str, details: dict):
+    log_entry = models.AuditLog(
+        actor_id=actor_id,
+        event_type=event_type,
+        details=details
+    )
+    db.add(log_entry)
+    db.commit()  # Commit immediately to ensure log is saved
+    return log_entry
+
+def get_audit_logs(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.AuditLog).order_by(models.AuditLog.timestamp.desc()).offset(skip).limit(limit).all()
+
+# Walkthrough Template CRUD functions
+def create_walkthrough_template(db: Session, template: schemas.WalkthroughTemplateCreate):
+    db_template = models.WalkthroughTemplate(
+        name=template.name,
+        description=template.description,
+        steps=template.steps
+    )
+    db.add(db_template)
+    db.commit()
+    db.refresh(db_template)
+    return db_template
+
+def get_walkthrough_templates(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.WalkthroughTemplate).offset(skip).limit(limit).all()
+
+def get_walkthrough_template(db: Session, template_id: int):
+    return db.query(models.WalkthroughTemplate).filter(models.WalkthroughTemplate.id == template_id).first()

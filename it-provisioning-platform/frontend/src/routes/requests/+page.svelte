@@ -45,7 +45,7 @@
 				<tbody>
 					{#each requests as req}
 						<tr>
-							<td>{req.id}</td>
+							<td><a href="/requests/{req.id}" class="request-link">{req.id}</a></td>
 							<td>
 								<span class="status status-{req.status}">{req.status}</span>
 							</td>
@@ -177,5 +177,15 @@
 	summary {
 		font-weight: 500;
 		color: #007bff;
+	}
+
+	.request-link {
+		color: #007bff;
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+	.request-link:hover {
+		text-decoration: underline;
 	}
 </style>

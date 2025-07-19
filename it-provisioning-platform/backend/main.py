@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from pydantic import BaseModel
+from typing import Any
 import models, schemas, crud
 from database import engine, get_db
 from ws_manager import manager
@@ -119,10 +121,28 @@ async def update_request_status(
     if not db_request:
         raise HTTPException(status_code=404, detail="Request not found")
     
+    # Store original status for audit log
+    original_status = db_request.status.value
+    
     # Update the status
     db_request.status = status  # type: ignore
     db.commit()
     db.refresh(db_request)
+
+    # Create audit log entry
+    admin_user = db.query(models.User).filter(models.User.role == models.UserRole.admin).first()
+    if admin_user:
+        actor_id = admin_user.id  # Get the actual value
+        crud.create_audit_log(
+            db=db,
+            actor_id=actor_id,  # type: ignore
+            event_type="REQUEST_STATUS_CHANGED",
+            details={
+                "request_id": request_id,
+                "from_status": original_status,
+                "to_status": status.value
+            }
+        )
 
     # Broadcast the status update
     await manager.broadcast({
@@ -130,6 +150,34 @@ async def update_request_status(
         "data": {"id": request_id, "status": status.value}
     })
 
+    return db_request
+
+# Get a specific request by ID
+@app.get("/requests/{request_id}", response_model=schemas.Request)
+def read_request(request_id: int, db: Session = Depends(get_db)):
+    db_request = db.query(models.Request).filter(models.Request.id == request_id).first()
+    if db_request is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return db_request
+
+# Schema for walkthrough state updates
+class WalkthroughStateUpdate(BaseModel):
+    state: dict[str, Any]
+
+# Update walkthrough state for a request
+@app.put("/requests/{request_id}/walkthrough-state", response_model=schemas.Request)
+def update_walkthrough_state(
+    request_id: int, 
+    update: WalkthroughStateUpdate, 
+    db: Session = Depends(get_db)
+):
+    db_request = db.query(models.Request).filter(models.Request.id == request_id).first()
+    if db_request is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    db_request.walkthrough_state = update.state  # type: ignore
+    db.commit()
+    db.refresh(db_request)
     return db_request
 
 # TEMP Accounts endpoints
@@ -191,6 +239,9 @@ def update_temp_account_status(
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
+    # Store original state for audit log
+    original_status = account.is_in_use
+
     # Update our local database
     setattr(account, 'is_in_use', is_in_use)
     db.commit()
@@ -208,6 +259,25 @@ def update_temp_account_status(
         f"-Description {description}"
     )
 
+    # Create audit log entry
+    # In a real app, actor_id would come from an authenticated session.
+    # We'll hardcode to the first admin for now.
+    admin_user = db.query(models.User).filter(models.User.role == models.UserRole.admin).first()
+    if admin_user:
+        actor_id = admin_user.id  # Get the actual value
+        crud.create_audit_log(
+            db=db,
+            actor_id=actor_id,  # type: ignore
+            event_type="TEMP_ACCOUNT_STATUS_CHANGED",
+            details={
+                "account_id": account_id,
+                "user_principal_name": account.user_principal_name,
+                "from_status": "available" if not bool(original_status) else "in_use",
+                "to_status": "in_use" if is_in_use else "available",
+                "powershell_command": command
+            }
+        )
+
     # Convert the updated account to a dict for the response
     updated_account_data = {
         "id": account.id,
@@ -221,3 +291,29 @@ def update_temp_account_status(
         "powershell_command": command,
         "updated_account": updated_account_data
     }
+
+# Audit Log API endpoint
+@app.get("/admin/audit-log", response_model=list[schemas.AuditLog])
+def read_audit_log(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    logs = crud.get_audit_logs(db, skip=skip, limit=limit)
+    return logs
+
+# Walkthrough Template endpoints
+@app.post("/admin/walkthrough-templates", response_model=schemas.WalkthroughTemplate)
+def create_walkthrough_template(
+    template: schemas.WalkthroughTemplateCreate,
+    db: Session = Depends(get_db)
+):
+    return crud.create_walkthrough_template(db=db, template=template)
+
+@app.get("/admin/walkthrough-templates", response_model=list[schemas.WalkthroughTemplate])
+def read_walkthrough_templates(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    templates = crud.get_walkthrough_templates(db, skip=skip, limit=limit)
+    return templates
+
+@app.get("/admin/walkthrough-templates/{template_id}", response_model=schemas.WalkthroughTemplate)
+def read_walkthrough_template(template_id: int, db: Session = Depends(get_db)):
+    template = crud.get_walkthrough_template(db, template_id=template_id)
+    if template is None:
+        raise HTTPException(status_code=404, detail="Walkthrough template not found")
+    return template

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Any
+from datetime import datetime
 from models import UserRole
 
 class UserBase(BaseModel):
@@ -43,6 +44,7 @@ class Request(RequestBase):
     id: int
     status: str
     submitted_by_manager_id: int
+    walkthrough_state: dict[str, Any] | None = None  # Add this line
 
     class Config:
         from_attributes = True
@@ -56,6 +58,30 @@ class TempAccountCreate(TempAccountBase):
     pass
 
 class TempAccount(TempAccountBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class AuditLog(BaseModel):
+    id: int
+    timestamp: datetime
+    actor_id: int
+    event_type: str
+    details: dict[str, Any]
+
+    class Config:
+        from_attributes = True
+
+class WalkthroughTemplateBase(BaseModel):
+    name: str
+    description: str
+    steps: list[dict[str, Any]]
+
+class WalkthroughTemplateCreate(WalkthroughTemplateBase):
+    pass
+
+class WalkthroughTemplate(WalkthroughTemplateBase):
     id: int
 
     class Config:
