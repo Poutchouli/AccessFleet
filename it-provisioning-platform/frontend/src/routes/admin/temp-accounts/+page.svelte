@@ -1,10 +1,9 @@
 <script>
 	import { onMount } from 'svelte';
+	import { commandQueue } from '$lib/stores/commandQueue.js'; // Import our new store
 	let accounts = [];
 	let message = '';
 	let isLoading = false;
-	let showCommandModal = false;
-	let commandToRun = '';
 
 	// This is the command the application will show to the admin
 	const powershellCommand = `Get-ADGroupMember -Identity "Your-Temp-Accounts-Group" | Select-Object displayName, userPrincipalName | Export-Csv -Path "C:\\temp\\temp_accounts.csv" -NoTypeInformation`;
@@ -53,9 +52,8 @@
 			// Update the UI with the data from the backend response
 			accounts = accounts.map(a => a.id === account.id ? result.updated_account : a);
 			
-			// Show the command in a modal
-			commandToRun = result.powershell_command;
-			showCommandModal = true;
+			// Add the command to our queue instead of showing a modal
+			commandQueue.update(queue => [...queue, result.powershell_command]);
 
 		} catch (error) {
 			alert(`Error: ${error.message}`);
@@ -108,17 +106,6 @@
 	</tbody>
 </table>
 
-{#if showCommandModal}
-<div class="modal-backdrop" on:click={() => showCommandModal = false}>
-	<div class="modal" on:click|stopPropagation>
-		<h4>PowerShell Command Generated</h4>
-		<p>Run the following command in your PowerShell console to apply the change in Active Directory.</p>
-		<textarea readonly>{commandToRun}</textarea>
-		<button on:click={() => showCommandModal = false}>Close</button>
-	</div>
-</div>
-{/if}
-
 <style>
 	.workflow-box {
 		border: 1px solid #ccc;
@@ -154,33 +141,5 @@
 	}
 	button:hover {
 		background-color: #0052a3;
-	}
-	.modal-backdrop {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		z-index: 1000;
-	}
-	.modal {
-		background-color: white;
-		padding: 2rem;
-		border-radius: 5px;
-		width: 80%;
-		max-width: 600px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-	}
-	.modal textarea {
-		height: 100px;
-		resize: vertical;
-		margin: 1rem 0;
-	}
-	.modal button {
-		margin-top: 1rem;
 	}
 </style>

@@ -1,7 +1,10 @@
 <script>
 	import { locale, _, isLoading } from 'svelte-i18n';
+	import { commandQueue } from '$lib/stores/commandQueue.js'; // Import our queue store
 	import '../lib/i18n.js'; // Import to initialize
 	import { onMount } from 'svelte';
+
+	let showQueueModal = false;
 
 	// Set default locale immediately
 	locale.set('en');
@@ -20,6 +23,11 @@
 			}
 		});
 	});
+
+	function clearQueue() {
+		commandQueue.set([]);
+		showQueueModal = false;
+	}
 </script>
 
 <header>
@@ -31,9 +39,17 @@
 		<a href="/admin/dashboard">Admin: Dashboard</a>
 		<a href="/admin/forms">Admin: Forms</a>
 		<a href="/admin/temp-accounts">Admin: TEMP Accounts</a>
-		<div class="lang-switcher">
-			<button class:active={$locale === 'en'} on:click={() => locale.set('en')}>EN</button>
-			<button class:active={$locale === 'fr'} on:click={() => locale.set('fr')}>FR</button>
+
+		<div class="controls">
+			{#if $commandQueue.length > 0}
+				<button on:click={() => showQueueModal = true} class="queue-button">
+					Command Queue ({$commandQueue.length})
+				</button>
+			{/if}
+			<div class="lang-switcher">
+				<button class:active={$locale === 'en'} on:click={() => locale.set('en')}>EN</button>
+				<button class:active={$locale === 'fr'} on:click={() => locale.set('fr')}>FR</button>
+			</div>
 		</div>
 	</nav>
 </header>
@@ -41,6 +57,17 @@
 <main>
 	<slot />
 </main>
+
+{#if showQueueModal}
+	<div class="modal-backdrop" on:click={() => showQueueModal = false}>
+		<div class="modal" on:click|stopPropagation>
+			<h4>Queued PowerShell Commands</h4>
+			<p>Copy the entire script below and run it in your PowerShell console.</p>
+			<textarea readonly rows="10">{$commandQueue.join('\n')}</textarea>
+			<button on:click={clearQueue}>Clear Queue & Close</button>
+		</div>
+	</div>
+{/if}
 
 <style>
 	header {
@@ -59,6 +86,7 @@
 		display: flex;
 		align-items: center;
 		gap: 1rem;
+		flex-grow: 1; /* Allow nav to grow */
 	}
 	nav a {
 		color: #4a5568;
@@ -69,20 +97,78 @@
 	nav a:hover {
 		color: #2c5282;
 	}
-	.lang-switcher {
-		margin-left: auto;
+	.controls {
+		display: flex;
+		align-items: center;
+		margin-left: auto; /* Push controls to the right */
+		gap: 1rem;
 	}
-	nav button {
+	.queue-button {
+		background-color: #e2e8f0;
+		border: 1px solid #cbd5e0;
+		border-radius: 5px;
+		padding: 0.5rem 1rem;
+		cursor: pointer;
+		font-weight: bold;
+		color: #2d3748;
+	}
+	.queue-button:hover {
+		background-color: #cbd5e0;
+	}
+	.lang-switcher {
+		display: flex;
+		gap: 0.25rem;
+	}
+	nav .lang-switcher button {
 		background: none;
 		border: 1px solid transparent;
 		padding: 0.5rem;
-		margin-left: 0.5rem;
 		cursor: pointer;
 		font-weight: bold;
 		color: #4a5568;
 	}
-	nav button.active {
+	nav .lang-switcher button.active {
 		color: #2c5282;
 		border-bottom: 2px solid #2c5282;
+	}
+	.modal-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 1000;
+	}
+	.modal {
+		background-color: white;
+		padding: 2rem;
+		border-radius: 5px;
+		width: 80%;
+		max-width: 700px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	}
+	.modal textarea {
+		width: 100%;
+		font-family: monospace;
+		padding: 0.5rem;
+		border: 1px solid #cbd5e0;
+		border-radius: 3px;
+		margin: 1rem 0;
+	}
+	.modal button {
+		background-color: #2c5282;
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 5px;
+		cursor: pointer;
+		font-weight: bold;
+	}
+	.modal button:hover {
+		background-color: #2a4a7c;
 	}
 </style>
