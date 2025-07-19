@@ -46,3 +46,17 @@ class Request(RequestBase):
 
     class Config:
         from_attributes = True
+
+class TempAccountBase(BaseModel):
+    user_principal_name: str
+    display_name: str
+    is_in_use: bool = False
+
+class TempAccountCreate(TempAccountBase):
+    pass
+
+class TempAccount(TempAccountBase):
+    id: int
+
+    class Config:
+        from_attributes = True

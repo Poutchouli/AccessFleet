@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum as SQLAlchemyEnum, ForeignKey
+from sqlalchemy import Column, Integer, String, Enum as SQLAlchemyEnum, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from database import Base
 import enum
@@ -40,3 +40,11 @@ class Request(Base):
     submitted_by_manager_id = Column(Integer, ForeignKey("users.id"))
     processed_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     form_definition_id = Column(Integer, ForeignKey("form_definitions.id"))
+
+class TempAccount(Base):
+    __tablename__ = "temp_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_principal_name = Column(String, unique=True, index=True)
+    display_name = Column(String, index=True)
+    is_in_use = Column(Boolean, default=False)  # Track if account is currently assigned

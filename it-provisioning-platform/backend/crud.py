@@ -45,3 +45,20 @@ def create_request(db: Session, request: schemas.RequestCreate, user_id: int):
 
 def get_requests(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Request).offset(skip).limit(limit).all()
+
+def get_temp_accounts(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.TempAccount).offset(skip).limit(limit).all()
+
+def get_temp_account_by_upn(db: Session, upn: str):
+    return db.query(models.TempAccount).filter(models.TempAccount.user_principal_name == upn).first()
+
+def create_temp_account(db: Session, account: schemas.TempAccountCreate):
+    db_account = models.TempAccount(
+        user_principal_name=account.user_principal_name,
+        display_name=account.display_name,
+        is_in_use=account.is_in_use
+    )
+    db.add(db_account)
+    db.commit()
+    db.refresh(db_account)
+    return db_account

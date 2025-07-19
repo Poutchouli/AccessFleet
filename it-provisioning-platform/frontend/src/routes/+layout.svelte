@@ -28,7 +28,9 @@
 		<a href="/">Home</a>
 		<a href="/users">Users</a>
 		<a href="/requests">View Requests</a>
+		<a href="/admin/dashboard">Admin: Dashboard</a>
 		<a href="/admin/forms">Admin: Forms</a>
+		<a href="/admin/temp-accounts">Admin: TEMP Accounts</a>
 		<div class="lang-switcher">
 			<button class:active={$locale === 'en'} on:click={() => locale.set('en')}>EN</button>
 			<button class:active={$locale === 'fr'} on:click={() => locale.set('fr')}>FR</button>

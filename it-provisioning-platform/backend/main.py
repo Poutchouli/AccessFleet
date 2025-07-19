@@ -1,9 +1,13 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import models, schemas, crud
 from database import engine, get_db
+from ws_manager import manager
+from models import RequestStatus
+import csv
+import io
 
 # This creates the tables. If they already exist, it does nothing.
 models.Base.metadata.create_all(bind=engine)
@@ -22,6 +26,17 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"message": "Hello from FastAPI Backend"}
+
+# WebSocket endpoint for admin dashboard
+@app.websocket("/ws/admin-dashboard")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # We don't need to receive data, just keep the connection open
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -64,16 +79,104 @@ def read_form_definition(form_id: int, db: Session = Depends(get_db)):
     return form
 
 @app.post("/requests/", response_model=schemas.Request)
-def create_request(request: schemas.RequestCreate, db: Session = Depends(get_db)):
+async def create_request(request: schemas.RequestCreate, db: Session = Depends(get_db)):
     # In a real app, you'd get the user_id from an authenticated token.
     # For now, we'll hardcode it to the first manager user.
     manager_user = db.query(models.User).filter(models.User.role == models.UserRole.manager).first()
     if not manager_user:
         raise HTTPException(status_code=404, detail="No manager user found to submit request.")
     user_id: int = manager_user.id  # type: ignore
-    return crud.create_request(db=db, request=request, user_id=user_id)
+    
+    db_request = crud.create_request(db=db, request=request, user_id=user_id)
+    
+    # Broadcast the new request to all connected admins
+    await manager.broadcast({
+        "type": "new_request",
+        "data": {
+            "id": db_request.id,
+            "status": db_request.status.value,
+            "submitted_by_manager_id": db_request.submitted_by_manager_id,
+            "form_definition_id": db_request.form_definition_id,
+            "form_data": db_request.form_data
+        }
+    })
+    
+    return db_request
 
 @app.get("/requests/", response_model=list[schemas.Request])
 def read_requests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     requests = crud.get_requests(db, skip=skip, limit=limit)
     return requests
+
+# Add the status update endpoint
+@app.put("/requests/{request_id}/status", response_model=schemas.Request)
+async def update_request_status(
+    request_id: int, 
+    status: RequestStatus, 
+    db: Session = Depends(get_db)
+):
+    db_request = db.query(models.Request).filter(models.Request.id == request_id).first()
+    if not db_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Update the status
+    db_request.status = status  # type: ignore
+    db.commit()
+    db.refresh(db_request)
+
+    # Broadcast the status update
+    await manager.broadcast({
+        "type": "status_update",
+        "data": {"id": request_id, "status": status.value}
+    })
+
+    return db_request
+
+# TEMP Accounts endpoints
+@app.get("/admin/temp-accounts", response_model=list[schemas.TempAccount])
+def get_temp_accounts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    accounts = crud.get_temp_accounts(db, skip=skip, limit=limit)
+    return accounts
+
+@app.post("/admin/upload-temp-accounts-csv")
+async def upload_temp_accounts_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    if not file.filename or not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Invalid file type. Please upload a CSV.")
+
+    try:
+        # Read CSV content
+        contents = await file.read()
+        # Decode and read as a file-like object
+        stream = io.StringIO(contents.decode("utf-8"))
+        reader = csv.DictReader(stream)
+
+        synced_count = 0
+        updated_count = 0
+
+        for row in reader:
+            # Assumes CSV has 'displayName' and 'userPrincipalName' headers
+            upn = row.get("userPrincipalName")
+            display_name = row.get("displayName")
+
+            if not upn or not display_name:
+                continue
+
+            # Basic upsert logic
+            account = crud.get_temp_account_by_upn(db, upn)
+            if account:
+                # Update existing account if needed
+                setattr(account, 'display_name', display_name)
+                updated_count += 1
+            else:
+                # Create new account
+                account_data = schemas.TempAccountCreate(
+                    user_principal_name=upn,
+                    display_name=display_name
+                )
+                crud.create_temp_account(db, account_data)
+                synced_count += 1
+        
+        db.commit()
+        return {"message": f"Sync complete. Added: {synced_count}, Updated: {updated_count}."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing file: {e}")
