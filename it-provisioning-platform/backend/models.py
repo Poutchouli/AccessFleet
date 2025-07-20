@@ -41,6 +41,7 @@ class Request(Base):
     status = Column(SQLAlchemyEnum(RequestStatus), default=RequestStatus.pending)
     form_data = Column(JSONB)  # Stores the user's answers
     walkthrough_state = Column(JSONB, nullable=True)  # To store checklist progress
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
     
     submitted_by_manager_id = Column(Integer, ForeignKey("users.id"))
     processed_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)

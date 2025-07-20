@@ -87,3 +87,11 @@ class WalkthroughTemplate(WalkthroughTemplateBase):
 
     class Config:
         from_attributes = True
+
+# New User Creation schemas
+class NewADUser(BaseModel):
+    first_name: str
+    last_name: str
+    sam_account_name: str  # This is the unique login name
+    department: str
+    password: str

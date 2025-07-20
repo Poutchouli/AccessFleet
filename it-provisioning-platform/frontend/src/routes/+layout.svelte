@@ -39,6 +39,8 @@
 		<a href="/admin/dashboard">Admin: Dashboard</a>
 		<a href="/admin/forms">Admin: Forms</a>
 		<a href="/admin/temp-accounts">Admin: TEMP Accounts</a>
+		<a href="/admin/new-user">Admin: New User</a>
+		<a href="/admin/analytics">Admin: Analytics</a>
 		<a href="/admin/audit">Admin: Audit Log</a>
 
 		<div class="controls">

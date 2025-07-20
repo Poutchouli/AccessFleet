@@ -10,7 +10,7 @@
 
 	onMount(async () => {
 		try {
-			const response = await fetch(`http://localhost:8000/form-definitions/${formId}`);
+			const response = await fetch(`/api/form-definitions/${formId}`);
 			if (!response.ok) {
 				throw new Error('Failed to load form');
 			}

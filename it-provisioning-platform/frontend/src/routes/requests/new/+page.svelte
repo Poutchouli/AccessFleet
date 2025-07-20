@@ -10,7 +10,7 @@
 
 	onMount(async () => {
 		try {
-			const response = await fetch('http://localhost:8000/form-definitions');
+			const response = await fetch('/api/form-definitions');
 			if (!response.ok) {
 				throw new Error('Failed to fetch form templates');
 			}
@@ -51,7 +51,7 @@
 		
 		submitting = true;
 		try {
-			const response = await fetch('http://localhost:8000/requests/', {
+			const response = await fetch('/api/requests/', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

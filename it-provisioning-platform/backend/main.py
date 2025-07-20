@@ -19,7 +19,7 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Frontend URL
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],  # Frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -362,3 +362,40 @@ def read_walkthrough_template(template_id: int, db: Session = Depends(get_db)):
     if template is None:
         raise HTTPException(status_code=404, detail="Walkthrough template not found")
     return template
+
+# Analytics endpoints
+@app.get("/analytics/request-volume")
+def get_request_volume(db: Session = Depends(get_db)):
+    volume_data = crud.get_request_volume_by_day(db)
+    # The query result is a list of Row objects, convert them to dicts
+    return [{"date": str(row.date), "count": row.count} for row in volume_data]
+
+@app.get("/analytics/status-breakdown")
+def get_status_breakdown(db: Session = Depends(get_db)):
+    status_data = crud.get_request_status_breakdown(db)
+    return [{"status": str(row.status), "count": row.count} for row in status_data]
+
+# New User Creation endpoint
+@app.post("/admin/generate-new-user-command", response_model=dict)
+def generate_new_user_command(user_data: schemas.NewADUser):
+    # Construct the user principal name and full name
+    upn = f"{user_data.sam_account_name}@yourdomain.com"  # Replace with your actual domain
+    full_name = f"{user_data.first_name} {user_data.last_name}"
+
+    # Generate the PowerShell command
+    # This command creates a new user and sets their password, which must be changed on first logon.
+    command = (
+        f"$password = ConvertTo-SecureString '{user_data.password}' -AsPlainText -Force; "
+        f"New-ADUser -Name '{full_name}' "
+        f"-GivenName '{user_data.first_name}' "
+        f"-Surname '{user_data.last_name}' "
+        f"-SamAccountName '{user_data.sam_account_name}' "
+        f"-UserPrincipalName '{upn}' "
+        f"-Department '{user_data.department}' "
+        f"-Path 'OU=Users,DC=yourdomain,DC=com' "  # Specify the OU to create the user in
+        f"-AccountPassword $password "
+        f"-Enabled $true "
+        f"-ChangePasswordAtLogon $true"
+    )
+    
+    return {"powershell_command": command}

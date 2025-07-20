@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func, Date
 import models, schemas
 
 def get_user_by_email(db: Session, email: str):
@@ -93,3 +94,26 @@ def get_walkthrough_templates(db: Session, skip: int = 0, limit: int = 100):
 
 def get_walkthrough_template(db: Session, template_id: int):
     return db.query(models.WalkthroughTemplate).filter(models.WalkthroughTemplate.id == template_id).first()
+
+# Analytics functions
+def get_request_volume_by_day(db: Session, days_limit: int = 30):
+    return (
+        db.query(
+            func.cast(models.Request.timestamp, Date).label("date"),
+            func.count(models.Request.id).label("count")
+        )
+        .group_by(func.cast(models.Request.timestamp, Date))
+        .order_by(func.cast(models.Request.timestamp, Date).desc())
+        .limit(days_limit)
+        .all()
+    )
+
+def get_request_status_breakdown(db: Session):
+    return (
+        db.query(
+            models.Request.status.label("status"),
+            func.count(models.Request.id).label("count")
+        )
+        .group_by(models.Request.status)
+        .all()
+    )

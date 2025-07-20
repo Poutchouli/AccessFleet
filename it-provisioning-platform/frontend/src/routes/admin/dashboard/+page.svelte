@@ -4,7 +4,7 @@
 	let ws;
 
 	onMount(async () => {
-		const response = await fetch('http://localhost:8000/requests/');
+		const response = await fetch('/api/requests/');
 		requests = await response.json();
 
 		// Establish WebSocket connection
@@ -31,7 +31,7 @@
 	});
 
 	async function changeStatus(requestId, newStatus) {
-		await fetch(`http://localhost:8000/requests/${requestId}/status?status=${newStatus}`, {
+		await fetch(`/api/requests/${requestId}/status?status=${newStatus}`, {
 			method: 'PUT'
 		});
 		// The UI will update via the WebSocket broadcast, not here.
