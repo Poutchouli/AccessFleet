@@ -16,7 +16,9 @@ export const nodes = [
 	() => import('./nodes/12'),
 	() => import('./nodes/13'),
 	() => import('./nodes/14'),
-	() => import('./nodes/15')
+	() => import('./nodes/15'),
+	() => import('./nodes/16'),
+	() => import('./nodes/17')
 ];
 
 export const server_loads = [];
@@ -27,15 +29,17 @@ export const dictionary = {
 		"/admin/audit": [4],
 		"/admin/dashboard": [5],
 		"/admin/forms": [6],
-		"/admin/forms/builder": [8],
-		"/admin/forms/[id]": [7],
-		"/admin/new-user": [9],
-		"/admin/temp-accounts": [10],
-		"/requests": [11],
+		"/admin/forms/builder": [7],
+		"/admin/forms/[id]": [8],
+		"/admin/initialize": [9],
+		"/admin/new-user": [10],
+		"/admin/temp-accounts": [11],
+		"/requests": [12],
 		"/requests/new": [13],
-		"/requests/[id]": [12],
-		"/test-api": [14],
-		"/users": [15]
+		"/requests/[id]": [14],
+		"/shared-mailboxes": [15],
+		"/test-api": [16],
+		"/users": [17]
 	};
 
 export const hooks = {

@@ -1,0 +1,7 @@
+DisplayName,PrimarySmtpAddress,FullAccess
+Sales Team,sales@company.com,john.smith@company.com;sarah.johnson@company.com
+HR Mailbox,hr@company.com,lisa.davis@company.com;david.wilson@company.com
+Finance Team,finance@company.com,michael.brown@company.com;lisa.davis@company.com
+Reception,reception@company.com,sarah.johnson@company.com
+IT Support,itsupport@company.com,john.smith@company.com;robert.anderson@company.com
+Marketing,marketing@company.com,emily.taylor@company.com;jennifer.martinez@company.com
