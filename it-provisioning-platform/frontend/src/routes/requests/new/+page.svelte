@@ -28,13 +28,25 @@
 		// Initialize form data based on form schema
 		if (form.schema && form.schema.elements) {
 			form.schema.elements.forEach(element => {
-				formData[element.name] = '';
+				if (element.type === 'checkbox' && element.choices) {
+					formData[element.name] = [];
+				} else if (element.type === 'boolean') {
+					formData[element.name] = false;
+				} else {
+					formData[element.name] = '';
+				}
 			});
 		} else if (form.schema && form.schema.pages) {
 			form.schema.pages.forEach(page => {
 				if (page.elements) {
 					page.elements.forEach(element => {
-						formData[element.name] = '';
+						if (element.type === 'checkbox' && element.choices) {
+							formData[element.name] = [];
+						} else if (element.type === 'boolean') {
+							formData[element.name] = false;
+						} else {
+							formData[element.name] = '';
+						}
 					});
 				}
 			});
@@ -70,35 +82,6 @@
 			error = err.message;
 		} finally {
 			submitting = false;
-		}
-	}
-
-	function renderFormField(element) {
-		const commonProps = {
-			required: element.isRequired,
-			disabled: submitting
-		};
-
-		switch (element.type) {
-			case 'text':
-				return { type: 'text', ...commonProps };
-			case 'email':
-				return { type: 'email', ...commonProps };
-			case 'number':
-				return { type: 'number', ...commonProps };
-			case 'dropdown':
-				return { type: 'select', options: element.choices || [], ...commonProps };
-			case 'radiogroup':
-				return { type: 'radio', options: element.choices || [], ...commonProps };
-			case 'checkbox':
-				return { type: 'checkbox', ...commonProps };
-			case 'boolean':
-				return { type: 'checkbox', ...commonProps };
-			case 'comment':
-			case 'textarea':
-				return { type: 'textarea', ...commonProps };
-			default:
-				return { type: 'text', ...commonProps };
 		}
 	}
 
@@ -152,67 +135,102 @@
 			<form on:submit|preventDefault={handleFormSubmit}>
 				<div class="form-fields">
 					{#each getFormElements(selectedForm) as element}
-						{@const fieldProps = renderFormField(element)}
 						<div class="field-group">
 							<label for={element.name}>
-								{element.title}
+								{element.title || element.name}
 								{#if element.isRequired}<span class="required">*</span>{/if}
 							</label>
 							
-							{#if fieldProps.type === 'select'}
+							{#if element.type === 'text' || element.type === 'comment'}
+								<input
+									type="text"
+									id={element.name}
+									bind:value={formData[element.name]}
+									placeholder={element.placeholder || ''}
+									required={element.isRequired}
+									disabled={submitting}
+								/>
+							{:else if element.type === 'email'}
+								<input
+									type="email"
+									id={element.name}
+									bind:value={formData[element.name]}
+									placeholder={element.placeholder || ''}
+									required={element.isRequired}
+									disabled={submitting}
+								/>
+							{:else if element.type === 'number'}
+								<input
+									type="number"
+									id={element.name}
+									bind:value={formData[element.name]}
+									placeholder={element.placeholder || ''}
+									required={element.isRequired}
+									disabled={submitting}
+								/>
+							{:else if element.type === 'textarea'}
+								<textarea 
+									id={element.name}
+									bind:value={formData[element.name]}
+									placeholder={element.placeholder || ''}
+									required={element.isRequired}
+									disabled={submitting}
+									rows="4"
+								></textarea>
+							{:else if element.type === 'dropdown'}
 								<select 
 									id={element.name} 
 									bind:value={formData[element.name]} 
-									required={fieldProps.required}
-									disabled={fieldProps.disabled}
+									required={element.isRequired}
+									disabled={submitting}
 								>
 									<option value="">Please select...</option>
-									{#each fieldProps.options as option}
-										<option value={option}>{option}</option>
+									{#each element.choices || [] as choice}
+										<option value={choice.value || choice}>{choice.text || choice}</option>
 									{/each}
 								</select>
-							{:else if fieldProps.type === 'radio'}
+							{:else if element.type === 'radiogroup'}
 								<div class="radio-group">
-									{#each fieldProps.options as option}
+									{#each element.choices || [] as choice}
 										<label class="radio-label">
 											<input 
 												type="radio" 
 												name={element.name}
-												value={option}
+												value={choice.value || choice}
 												bind:group={formData[element.name]}
-												required={fieldProps.required}
-												disabled={fieldProps.disabled}
+												required={element.isRequired}
+												disabled={submitting}
 											/>
-											{option}
+											{choice.text || choice}
 										</label>
 									{/each}
 								</div>
-							{:else if fieldProps.type === 'checkbox'}
+							{:else if element.type === 'checkbox'}
+								<div>
+									{#each element.choices || [] as choice}
+										<label class="checkbox-label">
+											<input
+												type="checkbox"
+												value={choice.value || choice}
+												bind:group={formData[element.name]}
+												disabled={submitting}
+											/>
+											{choice.text || choice}
+										</label>
+									{/each}
+								</div>
+							{:else if element.type === 'boolean'}
 								<label class="checkbox-label">
 									<input 
 										type="checkbox" 
 										id={element.name}
 										bind:checked={formData[element.name]}
-										disabled={fieldProps.disabled}
+										disabled={submitting}
 									/>
-									{element.title}
+									{element.title || element.name}
 								</label>
-							{:else if fieldProps.type === 'textarea'}
-								<textarea 
-									id={element.name}
-									bind:value={formData[element.name]}
-									required={fieldProps.required}
-									disabled={fieldProps.disabled}
-									rows="4"
-								></textarea>
 							{:else}
-								<input 
-									type={fieldProps.type}
-									id={element.name}
-									bind:value={formData[element.name]}
-									required={fieldProps.required}
-									disabled={fieldProps.disabled}
-								/>
+								<p>Unsupported field type: {element.type}</p>
 							{/if}
 						</div>
 					{/each}
@@ -323,6 +341,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 5px;
+		margin-bottom: 1rem;
 	}
 
 	label {
@@ -351,6 +370,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+		margin-top: 5px;
 	}
 
 	.radio-label, .checkbox-label {
@@ -359,6 +379,7 @@
 		gap: 8px;
 		font-weight: normal;
 		cursor: pointer;
+		margin-bottom: 5px;
 	}
 
 	.form-actions {

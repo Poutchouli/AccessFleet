@@ -10,92 +10,27 @@
 	let error = null;
 	let totalRequests = 0;
 	let avgDaily = 0;
+	
+	// Data variables that will trigger reactive chart creation
+	let volumeData = null;
+	let statusData = null;
 
+	// Fetch data when the component mounts
 	onMount(async () => {
 		try {
 			// Fetch volume data
 			const volumeResponse = await fetch('/api/analytics/request-volume');
 			if (!volumeResponse.ok) throw new Error('Failed to fetch volume data');
-			const volumeData = (await volumeResponse.json()).reverse(); // Reverse to show oldest to newest
+			volumeData = (await volumeResponse.json()).reverse(); // Reverse to show oldest to newest
 
 			// Fetch status breakdown
 			const statusResponse = await fetch('/api/analytics/status-breakdown');
 			if (!statusResponse.ok) throw new Error('Failed to fetch status data');
-			const statusData = await statusResponse.json();
+			statusData = await statusResponse.json();
 
 			// Calculate totals
 			totalRequests = statusData.reduce((sum, item) => sum + item.count, 0);
 			avgDaily = volumeData.length > 0 ? (totalRequests / volumeData.length).toFixed(1) : 0;
-
-			// Create volume chart
-			const volumeLabels = volumeData.map(item => item.date);
-			const volumeValues = volumeData.map(item => item.count);
-
-			volumeChart = new Chart(volumeChartCanvas, {
-				type: 'line',
-				data: {
-					labels: volumeLabels,
-					datasets: [{
-						label: 'New Requests per Day',
-						data: volumeValues,
-						borderColor: 'rgb(75, 192, 192)',
-						backgroundColor: 'rgba(75, 192, 192, 0.2)',
-						tension: 0.1,
-						fill: true
-					}]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: {
-						title: {
-							display: true,
-							text: 'Request Volume Over Time'
-						}
-					},
-					scales: {
-						y: {
-							beginAtZero: true,
-							ticks: {
-								stepSize: 1
-							}
-						}
-					}
-				}
-			});
-
-			// Create status chart
-			const statusLabels = statusData.map(item => item.status);
-			const statusValues = statusData.map(item => item.count);
-			const statusColors = [
-				'rgba(255, 206, 84, 0.8)',
-				'rgba(54, 162, 235, 0.8)',
-				'rgba(75, 192, 192, 0.8)',
-				'rgba(255, 99, 132, 0.8)'
-			];
-
-			statusChart = new Chart(statusChartCanvas, {
-				type: 'doughnut',
-				data: {
-					labels: statusLabels,
-					datasets: [{
-						data: statusValues,
-						backgroundColor: statusColors,
-						borderWidth: 2,
-						borderColor: '#fff'
-					}]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: {
-						title: {
-							display: true,
-							text: 'Request Status Distribution'
-						}
-					}
-				}
-			});
 
 			isLoading = false;
 		} catch (err) {
@@ -103,6 +38,90 @@
 			isLoading = false;
 		}
 	});
+
+	// Reactive statement: Create volume chart when canvas and data are both available
+	$: if (volumeChartCanvas && volumeData && !isLoading) {
+		// Destroy the old chart instance if it exists, to prevent memory leaks
+		if (volumeChart) {
+			volumeChart.destroy();
+		}
+
+		const volumeLabels = volumeData.map(item => item.date);
+		const volumeValues = volumeData.map(item => item.count);
+
+		volumeChart = new Chart(volumeChartCanvas, {
+			type: 'line',
+			data: {
+				labels: volumeLabels,
+				datasets: [{
+					label: 'New Requests per Day',
+					data: volumeValues,
+					borderColor: 'rgb(75, 192, 192)',
+					backgroundColor: 'rgba(75, 192, 192, 0.2)',
+					tension: 0.1,
+					fill: true
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					title: {
+						display: true,
+						text: 'Request Volume Over Time'
+					}
+				},
+				scales: {
+					y: {
+						beginAtZero: true,
+						ticks: {
+							stepSize: 1
+						}
+					}
+				}
+			}
+		});
+	}
+
+	// Reactive statement: Create status chart when canvas and data are both available
+	$: if (statusChartCanvas && statusData && !isLoading) {
+		// Destroy the old chart instance if it exists, to prevent memory leaks
+		if (statusChart) {
+			statusChart.destroy();
+		}
+
+		const statusLabels = statusData.map(item => item.status);
+		const statusValues = statusData.map(item => item.count);
+		const statusColors = [
+			'rgba(255, 206, 84, 0.8)',
+			'rgba(54, 162, 235, 0.8)',
+			'rgba(75, 192, 192, 0.8)',
+			'rgba(255, 99, 132, 0.8)'
+		];
+
+		statusChart = new Chart(statusChartCanvas, {
+			type: 'doughnut',
+			data: {
+				labels: statusLabels,
+				datasets: [{
+					data: statusValues,
+					backgroundColor: statusColors,
+					borderWidth: 2,
+					borderColor: '#fff'
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					title: {
+						display: true,
+						text: 'Request Status Distribution'
+					}
+				}
+			}
+		});
+	}
 </script>
 
 <h2>Analytics Dashboard</h2>

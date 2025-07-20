@@ -399,3 +399,74 @@ def generate_new_user_command(user_data: schemas.NewADUser):
     )
     
     return {"powershell_command": command}
+
+@app.post("/admin/upload-ad-users-csv")
+async def upload_ad_users_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Upload and process AD Users CSV to populate the users table.
+    Expected CSV columns: DisplayName, EmailAddress
+    """
+    contents = await file.read()
+    stream = io.StringIO(contents.decode("utf-8"))
+    reader = csv.DictReader(stream)
+    
+    new_count = 0
+    for row in reader:
+        email = row.get("EmailAddress")
+        display_name = row.get("DisplayName")
+        
+        # Skip rows without required fields
+        if not email or not display_name:
+            continue
+            
+        # Check if user already exists
+        user = crud.get_user_by_email(db, email=email)
+        if not user:
+            # Create a user with a default role
+            user_schema = schemas.UserCreate(
+                full_name=display_name,
+                email=email,
+                role=models.UserRole.manager  # Assign a default role
+            )
+            crud.create_user(db=db, user=user_schema)
+            new_count += 1
+
+    return {"message": f"Processed AD Users. Added {new_count} new users."}
+
+@app.post("/admin/upload-shared-mailboxes-csv")
+async def upload_shared_mailboxes_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Upload and process Shared Mailboxes CSV to populate the shared_mailboxes table.
+    Expected CSV columns: DisplayName, PrimarySmtpAddress, FullAccess
+    """
+    contents = await file.read()
+    stream = io.StringIO(contents.decode("utf-8"))
+    reader = csv.DictReader(stream)
+    
+    new_count = 0
+    for row in reader:
+        primary_smtp = row.get("PrimarySmtpAddress")
+        display_name = row.get("DisplayName")
+        
+        # Skip rows without required fields
+        if not primary_smtp or not display_name:
+            continue
+            
+        # Basic upsert logic for shared mailboxes
+        mailbox = db.query(models.SharedMailbox).filter_by(primary_smtp_address=primary_smtp).first()
+        if not mailbox:
+            db_mailbox = models.SharedMailbox(
+                display_name=display_name,
+                primary_smtp_address=primary_smtp,
+                full_access_users=row.get("FullAccess", "")
+            )
+            db.add(db_mailbox)
+            new_count += 1
+    db.commit()
+    return {"message": f"Processed Shared Mailboxes. Added {new_count} new mailboxes."}
+
+# Endpoint to view shared mailboxes
+@app.get("/shared-mailboxes", response_model=list[schemas.SharedMailbox])
+def read_shared_mailboxes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    mailboxes = db.query(models.SharedMailbox).offset(skip).limit(limit).all()
+    return mailboxes

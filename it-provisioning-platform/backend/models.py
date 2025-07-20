@@ -56,6 +56,14 @@ class TempAccount(Base):
     display_name = Column(String, index=True)
     is_in_use = Column(Boolean, default=False)  # Track if account is currently assigned
 
+class SharedMailbox(Base):
+    __tablename__ = "shared_mailboxes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    display_name = Column(String, index=True)
+    primary_smtp_address = Column(String, unique=True, index=True)
+    full_access_users = Column(Text, nullable=True)  # Semicolon-separated list of users
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

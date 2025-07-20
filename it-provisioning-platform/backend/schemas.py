@@ -64,6 +64,20 @@ class TempAccount(TempAccountBase):
     class Config:
         from_attributes = True
 
+class SharedMailboxBase(BaseModel):
+    display_name: str
+    primary_smtp_address: str
+    full_access_users: str | None = None
+
+class SharedMailboxCreate(SharedMailboxBase):
+    pass
+
+class SharedMailbox(SharedMailboxBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
 class AuditLog(BaseModel):
     id: int
     timestamp: datetime

@@ -35,11 +35,13 @@
 	<nav>
 		<a href="/">Home</a>
 		<a href="/users">Users</a>
+		<a href="/shared-mailboxes">Shared Mailboxes</a>
 		<a href="/requests">View Requests</a>
 		<a href="/admin/dashboard">Admin: Dashboard</a>
 		<a href="/admin/forms">Admin: Forms</a>
 		<a href="/admin/temp-accounts">Admin: TEMP Accounts</a>
 		<a href="/admin/new-user">Admin: New User</a>
+		<a href="/admin/initialize">Admin: Initialize Data</a>
 		<a href="/admin/analytics">Admin: Analytics</a>
 		<a href="/admin/audit">Admin: Audit Log</a>
 
