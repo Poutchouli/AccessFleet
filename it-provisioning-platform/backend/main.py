@@ -180,6 +180,51 @@ def update_walkthrough_state(
     db.refresh(db_request)
     return db_request
 
+# Schema for temp account assignment
+class TempAccountAssign(BaseModel):
+    temp_account_id: int
+
+# Assign temp account to a request
+@app.post("/requests/{request_id}/assign-temp-account", response_model=schemas.Request)
+def assign_temp_account(
+    request_id: int,
+    assignment: TempAccountAssign,
+    db: Session = Depends(get_db)
+):
+    # Get the request
+    db_request = db.query(models.Request).filter(models.Request.id == request_id).first()
+    if not db_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    # Get the temp account and ensure it's available
+    db_temp_account = db.query(models.TempAccount).filter(models.TempAccount.id == assignment.temp_account_id).first()
+    if not db_temp_account:
+        raise HTTPException(status_code=404, detail="Temp account not found")
+    if db_temp_account.is_in_use:  # type: ignore
+        raise HTTPException(status_code=400, detail="Temp account is already in use")
+
+    # Perform the assignment
+    db_temp_account.is_in_use = True  # type: ignore
+    db_request.assigned_temp_account_id = db_temp_account.id  # type: ignore
+    
+    # Log this as an audit event
+    admin_user = db.query(models.User).filter(models.User.role == models.UserRole.admin).first()
+    if admin_user:
+        crud.create_audit_log(
+            db=db,
+            actor_id=admin_user.id,  # type: ignore
+            event_type="TEMP_ACCOUNT_ASSIGNED",
+            details={
+                "request_id": request_id, 
+                "temp_account_id": db_temp_account.id,
+                "account_upn": db_temp_account.user_principal_name
+            }
+        )
+
+    db.commit()
+    db.refresh(db_request)
+    return db_request
+
 # TEMP Accounts endpoints
 @app.get("/admin/temp-accounts", response_model=list[schemas.TempAccount])
 def get_temp_accounts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):

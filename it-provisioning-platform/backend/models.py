@@ -45,6 +45,7 @@ class Request(Base):
     submitted_by_manager_id = Column(Integer, ForeignKey("users.id"))
     processed_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     form_definition_id = Column(Integer, ForeignKey("form_definitions.id"))
+    assigned_temp_account_id = Column(Integer, ForeignKey("temp_accounts.id"), nullable=True)
 
 class TempAccount(Base):
     __tablename__ = "temp_accounts"

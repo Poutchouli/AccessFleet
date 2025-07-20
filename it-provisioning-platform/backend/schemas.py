@@ -44,7 +44,8 @@ class Request(RequestBase):
     id: int
     status: str
     submitted_by_manager_id: int
-    walkthrough_state: dict[str, Any] | None = None  # Add this line
+    walkthrough_state: dict[str, Any] | None = None
+    assigned_temp_account_id: int | None = None
 
     class Config:
         from_attributes = True

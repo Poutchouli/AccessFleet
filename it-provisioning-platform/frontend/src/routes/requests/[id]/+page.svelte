@@ -1,22 +1,29 @@
-<script></script>
+<script>
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
+	import { commandQueue } from '$lib/stores/commandQueue.js';
 
 	let request = null;
 	let templates = [];
 	let selectedTemplateId = null;
 	let checklistState = {};
+	let availableTempAccounts = [];
+	let allAccounts = [];
+	let selectedTempAccountId = null;
 
 	const requestId = $page.params.id;
 
 	onMount(async () => {
 		// Fetch all necessary data in parallel
-		const [reqRes, tplRes] = await Promise.all([
+		const [reqRes, tplRes, accRes] = await Promise.all([
 			fetch(`/api/requests/${requestId}`),
-			fetch('/api/admin/walkthrough-templates')
+			fetch('/api/admin/walkthrough-templates'),
+			fetch('/api/admin/temp-accounts')
 		]);
 		request = await reqRes.json();
 		templates = await tplRes.json();
+		allAccounts = await accRes.json();
+		availableTempAccounts = allAccounts.filter(acc => !acc.is_in_use);
 
 		// Load saved checklist state if it exists
 		if (request.walkthrough_state) {
@@ -28,6 +35,11 @@
 
 	// A "computed property" to get the selected template object
 	$: selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+
+	// Computed property to get assigned account details
+	$: assignedAccount = request?.assigned_temp_account_id 
+		? allAccounts.find(a => a.id === request.assigned_temp_account_id) 
+		: null;
 
 	function handleTemplateSelect(event) {
 		selectedTemplateId = parseInt(event.target.value);
@@ -56,6 +68,41 @@
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ state: checklistState })
 		});
+	}
+
+	async function assignAccount() {
+		if (!selectedTempAccountId) {
+			alert('Please select an account to assign.');
+			return;
+		}
+		try {
+			const response = await fetch(`/api/requests/${requestId}/assign-temp-account`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ temp_account_id: selectedTempAccountId })
+			});
+			if (!response.ok) throw new Error('Failed to assign account.');
+
+			// Update the UI
+			request = await response.json();
+			
+			const assignedAccount = availableTempAccounts.find(a => a.id === selectedTempAccountId);
+			
+			// Generate and queue the PowerShell command
+			const command = `Set-ADUser -Identity '${assignedAccount.user_principal_name}' -Enabled $false -Description 'In use for Request #${requestId}'`;
+			commandQueue.update(q => [...q, command]);
+
+			// Refresh available accounts list
+			const updatedAccounts = await (await fetch('/api/admin/temp-accounts')).json();
+			allAccounts = updatedAccounts;
+			availableTempAccounts = updatedAccounts.filter(acc => !acc.is_in_use);
+
+			alert('Account assigned successfully!');
+			selectedTempAccountId = null;
+
+		} catch (error) {
+			alert(`Error: ${error.message}`);
+		}
 	}
 </script>
 
@@ -91,6 +138,48 @@
 						<span>{value}</span>
 					</div>
 				{/each}
+			</div>
+
+			<h4>TEMP Account Assignment</h4>
+			<div class="temp-account-section">
+				{#if request.assigned_temp_account_id}
+					<div class="assigned-account">
+						<div class="account-info">
+							<strong>Account Assigned:</strong>
+							{#if assignedAccount}
+								<div class="account-details">
+									<div><strong>Display Name:</strong> {assignedAccount.display_name}</div>
+									<div><strong>UPN:</strong> {assignedAccount.user_principal_name}</div>
+									<div class="status-badge assigned">✓ Assigned</div>
+								</div>
+							{:else}
+								<span class="account-id">ID: {request.assigned_temp_account_id}</span>
+							{/if}
+						</div>
+					</div>
+				{:else}
+					<div class="assignment-controls">
+						<label for="account-select">Select Available TEMP Account:</label>
+						<div class="assignment-row">
+							<select id="account-select" bind:value={selectedTempAccountId}>
+								<option value={null}>-- Select available account --</option>
+								{#each availableTempAccounts as acc}
+									<option value={acc.id}>{acc.display_name} ({acc.user_principal_name})</option>
+								{/each}
+							</select>
+							<button 
+								class="assign-btn" 
+								on:click={assignAccount} 
+								disabled={!selectedTempAccountId}
+							>
+								Assign Account
+							</button>
+						</div>
+						{#if availableTempAccounts.length === 0}
+							<p class="no-accounts">No available TEMP accounts found.</p>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 
@@ -330,10 +419,116 @@
 		color: #155724;
 	}
 
+	/* TEMP Account Assignment Styles */
+	.temp-account-section {
+		margin-top: 1.5rem;
+		padding: 1rem;
+		background: #f8f9fa;
+		border-radius: 4px;
+		border-left: 3px solid #28a745;
+	}
+
+	.assigned-account {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.account-details {
+		margin-top: 0.5rem;
+		padding: 0.75rem;
+		background: white;
+		border-radius: 4px;
+		border: 1px solid #dee2e6;
+	}
+
+	.account-details div {
+		margin-bottom: 0.5rem;
+	}
+
+	.account-details div:last-child {
+		margin-bottom: 0;
+	}
+
+	.status-badge {
+		display: inline-block;
+		padding: 0.25rem 0.75rem;
+		border-radius: 12px;
+		font-size: 0.875rem;
+		font-weight: 500;
+	}
+
+	.status-badge.assigned {
+		background-color: #d4edda;
+		color: #155724;
+	}
+
+	.assignment-controls label {
+		display: block;
+		margin-bottom: 0.5rem;
+		font-weight: 500;
+	}
+
+	.assignment-row {
+		display: flex;
+		gap: 0.75rem;
+		align-items: center;
+	}
+
+	.assignment-row select {
+		flex: 1;
+		padding: 0.75rem;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		font-size: 1rem;
+	}
+
+	.assign-btn {
+		padding: 0.75rem 1.5rem;
+		background: #28a745;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.assign-btn:hover:not(:disabled) {
+		background: #218838;
+	}
+
+	.assign-btn:disabled {
+		background: #6c757d;
+		cursor: not-allowed;
+	}
+
+	.no-accounts {
+		margin-top: 0.75rem;
+		color: #856404;
+		font-style: italic;
+	}
+
+	.account-id {
+		font-family: monospace;
+		background: #e9ecef;
+		padding: 0.25rem 0.5rem;
+		border-radius: 3px;
+	}
+
 	@media (max-width: 768px) {
 		.container {
 			grid-template-columns: 1fr;
 			gap: 1rem;
+		}
+
+		.assignment-row {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.assign-btn {
+			margin-top: 0.5rem;
 		}
 	}
 </style>
