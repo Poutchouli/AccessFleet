@@ -2,43 +2,118 @@
 	import { onMount, onDestroy } from 'svelte';
 	let requests = [];
 	let ws;
+	let isPolling = false;
+	let pollInterval;
+	let connectionStatus = 'Connecting...';
 
 	onMount(async () => {
-		const response = await fetch('/api/requests/');
-		requests = await response.json();
+		// Load initial data
+		await loadRequests();
 
-		// Establish WebSocket connection
-		const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		ws = new WebSocket(`${wsProtocol}//localhost:8000/ws/admin-dashboard`);
-
-		ws.onmessage = (event) => {
-			const message = JSON.parse(event.data);
-
-			if (message.type === 'new_request') {
-				requests = [message.data, ...requests];
-			} else if (message.type === 'status_update') {
-				requests = requests.map((req) =>
-					req.id === message.data.id ? { ...req, status: message.data.status } : req
-				);
-			}
-		};
+		// Try to establish WebSocket connection with fallback to polling
+		connectWebSocket();
 	});
+
+	async function loadRequests() {
+		try {
+			const response = await fetch('/api/requests/');
+			requests = await response.json();
+		} catch (error) {
+			console.error('Failed to load requests:', error);
+		}
+	}
+
+	function connectWebSocket() {
+		try {
+			const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+			ws = new WebSocket(`${wsProtocol}//localhost:8000/ws/admin-dashboard`);
+
+			ws.onopen = () => {
+				connectionStatus = 'Connected (Live)';
+				isPolling = false;
+				if (pollInterval) {
+					clearInterval(pollInterval);
+					pollInterval = null;
+				}
+			};
+
+			ws.onmessage = (event) => {
+				const message = JSON.parse(event.data);
+
+				if (message.type === 'new_request') {
+					requests = [message.data, ...requests];
+				} else if (message.type === 'status_update') {
+					requests = requests.map((req) =>
+						req.id === message.data.id ? { ...req, status: message.data.status } : req
+					);
+				}
+			};
+
+			ws.onerror = (error) => {
+				console.warn('WebSocket error, falling back to polling:', error);
+				fallbackToPolling();
+			};
+
+			ws.onclose = () => {
+				console.warn('WebSocket closed, falling back to polling');
+				fallbackToPolling();
+			};
+
+		} catch (error) {
+			console.warn('WebSocket connection failed, using polling:', error);
+			fallbackToPolling();
+		}
+	}
+
+	function fallbackToPolling() {
+		connectionStatus = 'Connected (Polling)';
+		isPolling = true;
+		
+		if (ws) {
+			ws.close();
+			ws = null;
+		}
+
+		// Poll for updates every 5 seconds
+		if (!pollInterval) {
+			pollInterval = setInterval(loadRequests, 5000);
+		}
+	}
 
 	onDestroy(() => {
 		if (ws) {
 			ws.close();
 		}
+		if (pollInterval) {
+			clearInterval(pollInterval);
+		}
 	});
 
 	async function changeStatus(requestId, newStatus) {
-		await fetch(`/api/requests/${requestId}/status?status=${newStatus}`, {
-			method: 'PUT'
-		});
-		// The UI will update via the WebSocket broadcast, not here.
+		try {
+			await fetch(`/api/requests/${requestId}/status?status=${newStatus}`, {
+				method: 'PUT'
+			});
+			
+			// If using polling, refresh immediately
+			if (isPolling) {
+				await loadRequests();
+			}
+			// Otherwise, the UI will update via the WebSocket broadcast
+		} catch (error) {
+			console.error('Failed to update status:', error);
+			alert('Failed to update request status');
+		}
 	}
 </script>
 
-<h2>Admin Dashboard (Live)</h2>
+<h2>Admin Dashboard</h2>
+
+<div class="connection-status">
+	<span class="status-indicator" class:polling={isPolling} class:connected={!isPolling}>
+		{connectionStatus}
+	</span>
+</div>
 
 <table border="1" style="width: 100%; margin-top: 1rem;">
 	<thead>
@@ -123,5 +198,31 @@
 		padding: 0.25rem;
 		border: 1px solid #ccc;
 		border-radius: 0.25rem;
+	}
+
+	.connection-status {
+		margin-bottom: 1rem;
+		padding: 0.5rem;
+		background-color: #f8f9fa;
+		border: 1px solid #dee2e6;
+		border-radius: 0.375rem;
+		text-align: center;
+	}
+
+	.status-indicator {
+		padding: 0.375rem 0.75rem;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+	}
+
+	.status-indicator.connected {
+		background-color: #d1fae5;
+		color: #065f46;
+	}
+
+	.status-indicator.polling {
+		background-color: #fef3c7;
+		color: #92400e;
 	}
 </style>

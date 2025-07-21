@@ -11,4 +11,5 @@ WORKDIR /app
 COPY --from=builder /app/wheels /wheels
 COPY . .
 RUN pip install --no-cache /wheels/*
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Disable WebSocket support entirely for now
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--ws", "none"]

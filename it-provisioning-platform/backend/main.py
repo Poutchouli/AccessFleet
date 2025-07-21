@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -6,7 +6,8 @@ from pydantic import BaseModel
 from typing import Any
 import models, schemas, crud, auth
 from database import engine, get_db
-from ws_manager import manager
+# Temporarily disable WebSocket imports to get the API working
+# from ws_manager import manager
 from models import RequestStatus
 import csv
 import io
@@ -29,16 +30,16 @@ app.add_middleware(
 def read_root():
     return {"message": "Hello from FastAPI Backend"}
 
-# WebSocket endpoint for admin dashboard
-@app.websocket("/ws/admin-dashboard")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            # We don't need to receive data, just keep the connection open
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
+# Temporarily disabled WebSocket endpoint
+# @app.websocket("/ws/admin-dashboard")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await manager.connect(websocket)
+#     try:
+#         while True:
+#             # We don't need to receive data, just keep the connection open
+#             await websocket.receive_text()
+#     except WebSocketDisconnect:
+#         manager.disconnect(websocket)
 
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -91,17 +92,17 @@ async def create_request(request: schemas.RequestCreate, db: Session = Depends(g
     
     db_request = crud.create_request(db=db, request=request, user_id=user_id)
     
-    # Broadcast the new request to all connected admins
-    await manager.broadcast({
-        "type": "new_request",
-        "data": {
-            "id": db_request.id,
-            "status": db_request.status.value,
-            "submitted_by_manager_id": db_request.submitted_by_manager_id,
-            "form_definition_id": db_request.form_definition_id,
-            "form_data": db_request.form_data
-        }
-    })
+    # Temporarily disabled WebSocket broadcast
+    # await manager.broadcast({
+    #     "type": "new_request",
+    #     "data": {
+    #         "id": db_request.id,
+    #         "status": db_request.status.value,
+    #         "submitted_by_manager_id": db_request.submitted_by_manager_id,
+    #         "form_definition_id": db_request.form_definition_id,
+    #         "form_data": db_request.form_data
+    #     }
+    # })
     
     return db_request
 
@@ -159,11 +160,11 @@ async def update_request_status(
             }
         )
 
-    # Broadcast the status update
-    await manager.broadcast({
-        "type": "status_update",
-        "data": {"id": request_id, "status": status.value}
-    })
+    # Temporarily disabled WebSocket broadcast
+    # await manager.broadcast({
+    #     "type": "status_update",
+    #     "data": {"id": request_id, "status": status.value}
+    # })
 
     return db_request
 
@@ -646,17 +647,17 @@ async def create_mailbox_modification_request(
     db.commit()
     db.refresh(db_request)
     
-    # Broadcast the new request to admins
-    await manager.broadcast({
-        "type": "new_request",
-        "data": {
-            "id": db_request.id,
-            "status": db_request.status.value,
-            "timestamp": db_request.timestamp.isoformat(),
-            "submitted_by_manager_id": db_request.submitted_by_manager_id,
-            "form_data": db_request.form_data,
-            "type": "mailbox_modifications"
-        }
-    })
+    # Temporarily disabled WebSocket broadcast
+    # await manager.broadcast({
+    #     "type": "new_request",
+    #     "data": {
+    #         "id": db_request.id,
+    #         "status": db_request.status.value,
+    #         "timestamp": db_request.timestamp.isoformat(),
+    #         "submitted_by_manager_id": db_request.submitted_by_manager_id,
+    #         "form_data": db_request.form_data,
+    #         "type": "mailbox_modifications"
+    #     }
+    # })
     
     return db_request

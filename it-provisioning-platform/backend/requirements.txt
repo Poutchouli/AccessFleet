@@ -1,8 +1,7 @@
-fastapi
-uvicorn[standard]
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
 psycopg2-binary
 SQLAlchemy
 python-dotenv
-email-validator
-websockets
 python-multipart
+email-validator
