@@ -93,9 +93,16 @@ class WalkthroughTemplateBase(BaseModel):
     name: str
     description: str
     steps: list[dict[str, Any]]
+    tools: list[str] | None = None  # Add this line
 
 class WalkthroughTemplateCreate(WalkthroughTemplateBase):
     pass
+
+class WalkthroughTemplateUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    steps: list[dict[str, Any]] | None = None
+    tools: list[str] | None = None
 
 class WalkthroughTemplate(WalkthroughTemplateBase):
     id: int

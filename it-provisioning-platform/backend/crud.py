@@ -88,7 +88,8 @@ def create_walkthrough_template(db: Session, template: schemas.WalkthroughTempla
     db_template = models.WalkthroughTemplate(
         name=template.name,
         description=template.description,
-        steps=template.steps
+        steps=template.steps,
+        tools=template.tools
     )
     db.add(db_template)
     db.commit()
@@ -100,6 +101,29 @@ def get_walkthrough_templates(db: Session, skip: int = 0, limit: int = 100):
 
 def get_walkthrough_template(db: Session, template_id: int):
     return db.query(models.WalkthroughTemplate).filter(models.WalkthroughTemplate.id == template_id).first()
+
+def update_walkthrough_template(db: Session, template_id: int, template: schemas.WalkthroughTemplateUpdate):
+    db_template = db.query(models.WalkthroughTemplate).filter(models.WalkthroughTemplate.id == template_id).first()
+    if db_template:
+        if template.name is not None:
+            db_template.name = template.name
+        if template.description is not None:
+            db_template.description = template.description
+        if template.steps is not None:
+            db_template.steps = template.steps
+        if template.tools is not None:
+            db_template.tools = template.tools
+        db.commit()
+        db.refresh(db_template)
+    return db_template
+
+def delete_walkthrough_template(db: Session, template_id: int):
+    db_template = db.query(models.WalkthroughTemplate).filter(models.WalkthroughTemplate.id == template_id).first()
+    if db_template:
+        db.delete(db_template)
+        db.commit()
+        return True
+    return False
 
 # Analytics functions
 def get_request_volume_by_day(db: Session, days_limit: int = 30):

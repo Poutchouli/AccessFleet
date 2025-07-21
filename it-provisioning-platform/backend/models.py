@@ -121,3 +121,4 @@ class WalkthroughTemplate(Base):
     name = Column(String, unique=True, index=True)
     description = Column(String)
     steps = Column(JSONB)
+    tools = Column(JSONB, nullable=True)  # e.g., ["new_user_form", "temp_account_assignment"]

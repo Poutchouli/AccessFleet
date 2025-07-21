@@ -378,6 +378,24 @@ def read_walkthrough_template(template_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Walkthrough template not found")
     return template
 
+@app.put("/admin/walkthrough-templates/{template_id}", response_model=schemas.WalkthroughTemplate)
+def update_walkthrough_template(
+    template_id: int,
+    template: schemas.WalkthroughTemplateUpdate,
+    db: Session = Depends(get_db)
+):
+    updated_template = crud.update_walkthrough_template(db=db, template_id=template_id, template=template)
+    if updated_template is None:
+        raise HTTPException(status_code=404, detail="Walkthrough template not found")
+    return updated_template
+
+@app.delete("/admin/walkthrough-templates/{template_id}")
+def delete_walkthrough_template(template_id: int, db: Session = Depends(get_db)):
+    success = crud.delete_walkthrough_template(db=db, template_id=template_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Walkthrough template not found")
+    return {"message": "Walkthrough template deleted successfully"}
+
 # Analytics endpoints
 @app.get("/analytics/request-volume")
 def get_request_volume(db: Session = Depends(get_db)):
