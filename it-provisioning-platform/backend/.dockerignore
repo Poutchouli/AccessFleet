@@ -1,9 +1,24 @@
+# ===========================
+# DOCKER IGNORE PATTERNS
+# ===========================
+
+# Python bytecode and cache
 __pycache__
 *.pyc
 *.pyo
 *.pyd
 .Python
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# Virtual environments
 env
+venv
+.venv
+.env
+
+# Python package and build files
 pip-log.txt
 pip-delete-this-directory.txt
 .tox
@@ -14,9 +29,51 @@ nosetests.xml
 coverage.xml
 *.cover
 *.log
+
+# Git and version control
 .git
-.mypy_cache
-.pytest_cache
-.hypothesis
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific files
 .DS_Store
 Thumbs.db
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+
+# Development and testing files
+*.test.py
+*.spec.py
+test/
+tests/
+__tests__/
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Environment and config files
+.env*
+config/local.*
+settings/local.*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and temporary files
+logs/
+*.tmp
+*.temp
+*.bak

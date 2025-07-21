@@ -1,5 +1,7 @@
 <script>
     import { user } from '$lib/stores/session.js';
+    import { invalidateAll } from '$app/navigation'; // Import invalidateAll for data refresh
+    import { goto } from '$app/navigation'; // Import goto for SvelteKit navigation
 
     let name = '';
     let description = '';
@@ -62,8 +64,13 @@
                 throw new Error(error.detail || 'Failed to save template');
             }
             
+            // Invalidate all data before navigating to ensure fresh data load
+            await invalidateAll();
+            
+            // Navigate back to the list page using SvelteKit's goto
+            await goto('/admin/walkthroughs');
+            
             alert('Template saved successfully!');
-            window.location.href = '/admin/walkthroughs';
         } catch (error) {
             alert(`Error: ${error.message}`);
         } finally {
@@ -175,7 +182,7 @@
             </div>
 
             <div class="form-actions">
-                <button type="button" class="cancel-btn" on:click={() => window.location.href = '/admin/walkthroughs'}>
+                <button type="button" class="cancel-btn" on:click={() => goto('/admin/walkthroughs')}>
                     Cancel
                 </button>
                 <button type="submit" class="save-btn" disabled={isSubmitting}>

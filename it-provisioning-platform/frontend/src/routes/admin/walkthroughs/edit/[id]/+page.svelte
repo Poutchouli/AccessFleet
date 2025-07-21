@@ -2,6 +2,8 @@
     import { page } from '$app/stores';
     import { user } from '$lib/stores/session.js';
     import { onMount } from 'svelte';
+    import { invalidateAll } from '$app/navigation'; // Import invalidateAll for data refresh
+    import { goto } from '$app/navigation'; // Import goto for SvelteKit navigation
 
     let template = null;
     let name = '';
@@ -43,7 +45,8 @@
             selectedTools = template.tools || [];
         } catch (error) {
             alert(`Error loading template: ${error.message}`);
-            window.location.href = '/admin/walkthroughs';
+            // Use SvelteKit navigation instead of window.location.href
+            await goto('/admin/walkthroughs');
         } finally {
             isLoading = false;
         }
@@ -95,8 +98,13 @@
                 throw new Error(error.detail || 'Failed to update template');
             }
             
+            // Invalidate all data before navigating to ensure fresh data load
+            await invalidateAll();
+            
+            // Navigate back to the list page using SvelteKit's goto
+            await goto('/admin/walkthroughs');
+            
             alert('Template updated successfully!');
-            window.location.href = '/admin/walkthroughs';
         } catch (error) {
             alert(`Error: ${error.message}`);
         } finally {
@@ -120,8 +128,13 @@
                 throw new Error(error.detail || 'Failed to delete template');
             }
             
+            // Invalidate all data before navigating to ensure fresh data load
+            await invalidateAll();
+            
+            // Navigate back to the list page using SvelteKit's goto
+            await goto('/admin/walkthroughs');
+            
             alert('Template deleted successfully!');
-            window.location.href = '/admin/walkthroughs';
         } catch (error) {
             alert(`Error deleting template: ${error.message}`);
         }
@@ -240,7 +253,7 @@
                         Delete Template
                     </button>
                     <div class="primary-actions">
-                        <button type="button" class="cancel-btn" on:click={() => window.location.href = '/admin/walkthroughs'}>
+                        <button type="button" class="cancel-btn" on:click={() => goto('/admin/walkthroughs')}>
                             Cancel
                         </button>
                         <button type="submit" class="save-btn" disabled={isSubmitting}>

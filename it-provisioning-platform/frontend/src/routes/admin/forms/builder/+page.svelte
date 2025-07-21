@@ -1,5 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation'; // Import invalidateAll for data refresh
+	import { goto } from '$app/navigation'; // Import goto for SvelteKit navigation
 
 	let formName = '';
 	let formDescription = '';
@@ -80,9 +82,10 @@
 			}
 
 			saveSuccess = true;
-			// Redirect to forms list after a brief delay
-			setTimeout(() => {
-				window.location.href = '/admin/forms';
+			// Invalidate all data and redirect to forms list after a brief delay
+			setTimeout(async () => {
+				await invalidateAll();
+				await goto('/admin/forms');
 			}, 2000);
 		} catch (error) {
 			console.error('Save error:', error);

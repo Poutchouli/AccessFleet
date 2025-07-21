@@ -1,5 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation'; // Import invalidateAll for data refresh
+	import { goto } from '$app/navigation'; // Import goto for SvelteKit navigation
 
 	let formTemplates = [];
 	let selectedForm = null;
@@ -76,8 +78,13 @@
 				throw new Error('Failed to submit request');
 			}
 
+			// Invalidate all data before navigating to ensure fresh data load
+			await invalidateAll();
+			
+			// Navigate back to requests page using SvelteKit's goto
+			await goto('/requests');
+			
 			alert('Request submitted successfully!');
-			window.location.href = '/requests';
 		} catch (err) {
 			error = err.message;
 		} finally {
