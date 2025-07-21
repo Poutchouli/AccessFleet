@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     full_name: str
     email: EmailStr
     role: UserRole
+    service: str | None = None
 
 class UserCreate(UserBase):
     pass
@@ -109,3 +110,13 @@ class NewADUser(BaseModel):
     sam_account_name: str  # This is the unique login name
     department: str
     password: str
+
+# Mailbox Modification schemas
+class MailboxModification(BaseModel):
+    mailbox_id: int
+    mailbox_name: str
+    add_users: list[str]  # List of user emails to add
+    remove_users: list[str]  # List of user emails to remove
+
+class MailboxModificationRequest(BaseModel):
+    modifications: list[MailboxModification]

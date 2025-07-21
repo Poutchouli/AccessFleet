@@ -54,6 +54,7 @@
 			<a href="/requests">View My Requests</a>
 			<a href="/requests/new">Submit New Request</a>
 			<a href="/shared-mailboxes">My Shared Mailboxes</a>
+			<a href="/mailboxes">Manage Mailboxes</a>
 		{/if}
 
 		<!-- Navigation for admins -->
@@ -86,7 +87,8 @@
 				<select on:change={handleLoginChange} class="login-select">
 					<option value="">Login As...</option>
 					<option value="1">Admin User (ID 1)</option>
-					<option value="2">Manager User (ID 2)</option>
+					<option value="2">Manager User (ID 2 - Sarah)</option>
+					<option value="3">Manager User (ID 3 - John)</option>
 				</select>
 			{/if}
 

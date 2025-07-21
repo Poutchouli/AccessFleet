@@ -33,12 +33,21 @@ class User(Base):
     full_name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     role = Column(SQLAlchemyEnum(UserRole))
+    service = Column(String, index=True, nullable=True)  # Department/Service field
     
     # Relationship: managers can see specific shared mailboxes
     visible_mailboxes = relationship(
         "SharedMailbox",
         secondary=manager_mailbox_association,
         back_populates="visible_to_managers"
+    )
+    
+    # Alias for clearer naming in the mailbox management context
+    managed_mailboxes = relationship(
+        "SharedMailbox",
+        secondary=manager_mailbox_association,
+        back_populates="managing_managers",
+        overlaps="visible_mailboxes"
     )
 
 class FormDefinition(Base):
@@ -84,7 +93,16 @@ class SharedMailbox(Base):
     visible_to_managers = relationship(
         "User",
         secondary=manager_mailbox_association,
-        back_populates="visible_mailboxes"
+        back_populates="visible_mailboxes",
+        overlaps="managed_mailboxes"
+    )
+    
+    # Alias for clearer naming in the mailbox management context
+    managing_managers = relationship(
+        "User",
+        secondary=manager_mailbox_association,
+        back_populates="managed_mailboxes",
+        overlaps="visible_mailboxes,visible_to_managers"
     )
 
 class AuditLog(Base):

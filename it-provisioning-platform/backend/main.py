@@ -106,8 +106,23 @@ async def create_request(request: schemas.RequestCreate, db: Session = Depends(g
     return db_request
 
 @app.get("/requests/", response_model=list[schemas.Request])
-def read_requests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    requests = crud.get_requests(db, skip=skip, limit=limit)
+def read_requests(
+    user: models.User | None = Depends(auth.get_optional_user), # Use auth to get the current user
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db)
+):
+    service_filter: str | None = None
+    # If the user is a manager, filter by their service
+    if user and user.role.value == 'manager':
+        # Get the service value properly
+        user_service = getattr(user, 'service', None)
+        if user_service is not None:
+            service_filter = str(user_service)
+        
+    # If the user is an admin or unlogged, service_filter remains None, so they see all requests
+    
+    requests = crud.get_requests(db, skip=skip, limit=limit, service=service_filter)
     return requests
 
 # Add the status update endpoint
@@ -562,3 +577,68 @@ def get_all_manager_permissions(
             ]
         })
     return permissions
+
+# Manager endpoint to get their assigned mailboxes for management
+@app.get("/manager/mailboxes", response_model=list[schemas.SharedMailbox])
+def get_manager_assigned_mailboxes(
+    current_manager: models.User = Depends(auth.require_manager),
+    db: Session = Depends(get_db)
+):
+    """Get all mailboxes that the current manager can manage."""
+    return current_manager.managed_mailboxes
+
+# Manager endpoint to create mailbox modification request
+@app.post("/requests/mailbox-modifications", response_model=schemas.Request)
+async def create_mailbox_modification_request(
+    request_data: schemas.MailboxModificationRequest,
+    current_manager: models.User = Depends(auth.require_manager),
+    db: Session = Depends(get_db)
+):
+    """Allow a manager to submit a batch of mailbox modifications as a request."""
+    
+    # Validate that all mailboxes belong to this manager
+    for modification in request_data.modifications:
+        mailbox = db.query(models.SharedMailbox).filter(
+            models.SharedMailbox.id == modification.mailbox_id
+        ).first()
+        
+        if not mailbox:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Mailbox with ID {modification.mailbox_id} not found"
+            )
+        
+        if mailbox not in current_manager.managed_mailboxes:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"You do not have permission to manage mailbox {mailbox.display_name}"
+            )
+    
+    # Create a new request with special mailbox modification form_data
+    db_request = models.Request(
+        submitted_by_manager_id=current_manager.id,
+        form_data={
+            "type": "mailbox_modifications",
+            "modifications": request_data.model_dump()["modifications"]
+        },
+        status=models.RequestStatus.pending,
+        form_definition_id=1  # We'll use a default form_definition_id for mailbox modifications
+    )
+    db.add(db_request)
+    db.commit()
+    db.refresh(db_request)
+    
+    # Broadcast the new request to admins
+    await manager.broadcast({
+        "type": "new_request",
+        "data": {
+            "id": db_request.id,
+            "status": db_request.status.value,
+            "timestamp": db_request.timestamp.isoformat(),
+            "submitted_by_manager_id": db_request.submitted_by_manager_id,
+            "form_data": db_request.form_data,
+            "type": "mailbox_modifications"
+        }
+    })
+    
+    return db_request

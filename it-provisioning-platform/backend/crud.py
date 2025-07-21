@@ -9,7 +9,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
 
 def create_user(db: Session, user: schemas.UserCreate):
-    db_user = models.User(email=user.email, full_name=user.full_name, role=user.role)
+    db_user = models.User(email=user.email, full_name=user.full_name, role=user.role, service=user.service)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -44,8 +44,14 @@ def create_request(db: Session, request: schemas.RequestCreate, user_id: int):
     db.refresh(db_request)
     return db_request
 
-def get_requests(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Request).offset(skip).limit(limit).all()
+def get_requests(db: Session, skip: int = 0, limit: int = 100, service: str | None = None):
+    query = db.query(models.Request)
+    
+    if service:
+        # Join with the User table and filter by the 'service' column
+        query = query.join(models.User, models.Request.submitted_by_manager_id == models.User.id).filter(models.User.service == service)
+        
+    return query.order_by(models.Request.timestamp.desc()).offset(skip).limit(limit).all()
 
 def get_temp_accounts(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.TempAccount).offset(skip).limit(limit).all()
