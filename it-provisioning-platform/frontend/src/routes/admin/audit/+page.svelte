@@ -42,7 +42,7 @@
 			<thead>
 				<tr>
 					<th>Timestamp</th>
-					<th>Actor ID</th>
+					<th>Actor</th>
 					<th>Event Type</th>
 					<th>Details</th>
 				</tr>
@@ -51,7 +51,20 @@
 				{#each logs as log (log.id)}
 					<tr>
 						<td class="timestamp">{formatTimestamp(log.timestamp)}</td>
-						<td class="actor">{log.actor_id}</td>
+						<td class="actor">
+							{#if log.actor}
+								<div class="actor-info">
+									<strong>{log.actor.full_name}</strong>
+									<br><small>{log.actor.email}</small>
+									<br><small class="role">👤 {log.actor.role}</small>
+									{#if log.actor.service}
+										<br><small>📍 {log.actor.service}</small>
+									{/if}
+								</div>
+							{:else}
+								<em>Unknown Actor</em>
+							{/if}
+						</td>
 						<td class="event-type">{formatEventType(log.event_type)}</td>
 						<td class="details">
 							<details>
@@ -157,5 +170,23 @@
 	
 	tbody tr:hover {
 		background-color: #edf2f7;
+	}
+
+	.actor-info {
+		line-height: 1.4;
+	}
+
+	.actor-info strong {
+		color: #2d3436;
+	}
+
+	.actor-info small {
+		color: #636e72;
+		font-size: 0.85em;
+	}
+
+	.actor-info .role {
+		text-transform: capitalize;
+		font-weight: 500;
 	}
 </style>

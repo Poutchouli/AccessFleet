@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, Date
 import models, schemas
 
@@ -46,7 +46,13 @@ def create_request(db: Session, request: schemas.RequestCreate, user_id: int):
     return db_request
 
 def get_requests(db: Session, skip: int = 0, limit: int = 100, service: str | None = None):
-    query = db.query(models.Request)
+    # Use joinedload to eagerly load related objects
+    query = db.query(models.Request).options(
+        joinedload(models.Request.submitted_by),
+        joinedload(models.Request.processed_by),
+        joinedload(models.Request.form_definition),
+        joinedload(models.Request.assigned_temp_account)
+    )
     
     if service:
         # Join with the User table and filter by the 'service' column
@@ -82,7 +88,9 @@ def create_audit_log(db: Session, *, actor_id: int, event_type: str, details: di
     return log_entry
 
 def get_audit_logs(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.AuditLog).order_by(models.AuditLog.timestamp.desc()).offset(skip).limit(limit).all()
+    return db.query(models.AuditLog).options(
+        joinedload(models.AuditLog.actor)
+    ).order_by(models.AuditLog.timestamp.desc()).offset(skip).limit(limit).all()
 
 # Walkthrough Template CRUD functions
 def create_walkthrough_template(db: Session, template: schemas.WalkthroughTemplateCreate):

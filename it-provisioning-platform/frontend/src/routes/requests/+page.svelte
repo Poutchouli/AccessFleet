@@ -37,8 +37,9 @@
 					<tr>
 						<th>ID</th>
 						<th>Status</th>
-						<th>Submitted By (User ID)</th>
-						<th>Form ID</th>
+						<th>Submitted By</th>
+						<th>Form</th>
+						<th>Assigned Account</th>
 						<th>Submitted Data</th>
 					</tr>
 				</thead>
@@ -49,8 +50,44 @@
 							<td>
 								<span class="status status-{req.status}">{req.status}</span>
 							</td>
-							<td>{req.submitted_by_manager_id}</td>
-							<td>{req.form_definition_id}</td>
+							<td>
+								{#if req.submitted_by}
+									<div class="user-info">
+										<strong>{req.submitted_by.full_name}</strong>
+										<br><small>{req.submitted_by.email}</small>
+										{#if req.submitted_by.service}
+											<br><small>📍 {req.submitted_by.service}</small>
+										{/if}
+									</div>
+								{:else}
+									<em>Unknown User</em>
+								{/if}
+							</td>
+							<td>
+								{#if req.form_definition}
+									<div class="form-info">
+										<strong>{req.form_definition.name}</strong>
+										{#if req.form_definition.description}
+											<br><small>{req.form_definition.description}</small>
+										{/if}
+									</div>
+								{:else}
+									<em>Unknown Form</em>
+								{/if}
+							</td>
+							<td>
+								{#if req.assigned_temp_account}
+									<div class="account-info">
+										<strong>{req.assigned_temp_account.display_name}</strong>
+										<br><small>{req.assigned_temp_account.user_principal_name}</small>
+										<span class="status {req.assigned_temp_account.is_in_use ? 'status-in-use' : 'status-available'}">
+											{req.assigned_temp_account.is_in_use ? 'In Use' : 'Available'}
+										</span>
+									</div>
+								{:else}
+									<em>No Account Assigned</em>
+								{/if}
+							</td>
 							<td>
 								<details>
 									<summary>View Data</summary>
@@ -152,6 +189,39 @@
 	.status-rejected {
 		background-color: #ff7675;
 		color: white;
+	}
+
+	.status-in-use {
+		background-color: #ff7675;
+		color: white;
+	}
+
+	.status-available {
+		background-color: #a8e6cf;
+		color: #00b894;
+	}
+
+	.user-info, .form-info, .account-info {
+		line-height: 1.4;
+	}
+
+	.user-info strong, .form-info strong, .account-info strong {
+		color: #2d3436;
+	}
+
+	.user-info small, .form-info small, .account-info small {
+		color: #636e72;
+		font-size: 0.85em;
+	}
+
+	.request-link {
+		color: #0984e3;
+		text-decoration: none;
+		font-weight: 600;
+	}
+
+	.request-link:hover {
+		text-decoration: underline;
 	}
 
 	.form-data {

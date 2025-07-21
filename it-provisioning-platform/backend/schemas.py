@@ -29,28 +29,12 @@ class FormDefinitionCreate(FormDefinitionBase):
 
 class FormDefinition(FormDefinitionBase):
     id: int
-    created_by_admin_id: int
+    created_by: User
+    suggested_walkthrough: 'WalkthroughTemplate | None' = None
 
     class Config:
         from_attributes = True
         populate_by_name = True
-
-class RequestBase(BaseModel):
-    form_definition_id: int
-    form_data: dict[str, Any]
-
-class RequestCreate(RequestBase):
-    pass
-
-class Request(RequestBase):
-    id: int
-    status: str
-    submitted_by_manager_id: int
-    walkthrough_state: dict[str, Any] | None = None
-    assigned_temp_account_id: int | None = None
-
-    class Config:
-        from_attributes = True
 
 class TempAccountBase(BaseModel):
     user_principal_name: str
@@ -62,6 +46,26 @@ class TempAccountCreate(TempAccountBase):
 
 class TempAccount(TempAccountBase):
     id: int
+
+    class Config:
+        from_attributes = True
+
+class RequestBase(BaseModel):
+    form_definition_id: int
+    form_data: dict[str, Any]
+
+class RequestCreate(RequestBase):
+    pass
+
+class Request(RequestBase):
+    id: int
+    status: str
+    # Include related objects instead of just IDs
+    submitted_by: User
+    processed_by: User | None = None
+    form_definition: 'FormDefinition'
+    assigned_temp_account: TempAccount | None = None
+    walkthrough_state: dict[str, Any] | None = None
 
     class Config:
         from_attributes = True
@@ -83,7 +87,8 @@ class SharedMailbox(SharedMailboxBase):
 class AuditLog(BaseModel):
     id: int
     timestamp: datetime
-    actor_id: int
+    # Replace actor_id with the full User object
+    actor: User
     event_type: str
     details: dict[str, Any]
 

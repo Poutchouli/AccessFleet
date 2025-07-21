@@ -49,6 +49,10 @@ class User(Base):
         back_populates="managing_managers",
         overlaps="visible_mailboxes"
     )
+    
+    # Relationships for requests
+    submitted_requests = relationship("Request", foreign_keys="Request.submitted_by_manager_id", back_populates="submitted_by")
+    processed_requests = relationship("Request", foreign_keys="Request.processed_by_admin_id", back_populates="processed_by")
 
 class FormDefinition(Base):
     __tablename__ = "form_definitions"
@@ -59,6 +63,11 @@ class FormDefinition(Base):
     schema = Column(JSONB)  # Column for the form builder's JSON output
     created_by_admin_id = Column(Integer, ForeignKey("users.id"))
     suggested_walkthrough_id = Column(Integer, ForeignKey("walkthrough_templates.id"), nullable=True)
+    
+    # Relationships
+    created_by = relationship("User", foreign_keys=[created_by_admin_id])
+    suggested_walkthrough = relationship("WalkthroughTemplate", foreign_keys=[suggested_walkthrough_id])
+    requests = relationship("Request", back_populates="form_definition")
 
 class Request(Base):
     __tablename__ = "requests"
@@ -73,6 +82,12 @@ class Request(Base):
     processed_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     form_definition_id = Column(Integer, ForeignKey("form_definitions.id"))
     assigned_temp_account_id = Column(Integer, ForeignKey("temp_accounts.id"), nullable=True)
+    
+    # Relationships for eager loading
+    submitted_by = relationship("User", foreign_keys=[submitted_by_manager_id], back_populates="submitted_requests")
+    processed_by = relationship("User", foreign_keys=[processed_by_admin_id], back_populates="processed_requests")
+    form_definition = relationship("FormDefinition", back_populates="requests")
+    assigned_temp_account = relationship("TempAccount", back_populates="assigned_requests")
 
 class TempAccount(Base):
     __tablename__ = "temp_accounts"
@@ -81,6 +96,9 @@ class TempAccount(Base):
     user_principal_name = Column(String, unique=True, index=True)
     display_name = Column(String, index=True)
     is_in_use = Column(Boolean, default=False)  # Track if account is currently assigned
+    
+    # Relationships
+    assigned_requests = relationship("Request", back_populates="assigned_temp_account")
 
 class SharedMailbox(Base):
     __tablename__ = "shared_mailboxes"
@@ -114,6 +132,9 @@ class AuditLog(Base):
     actor_id = Column(Integer, ForeignKey("users.id"))
     event_type = Column(String, index=True)
     details = Column(JSONB)  # To store flexible event data
+    
+    # Relationships
+    actor = relationship("User", foreign_keys=[actor_id])
 
 class WalkthroughTemplate(Base):
     __tablename__ = "walkthrough_templates"
@@ -123,3 +144,6 @@ class WalkthroughTemplate(Base):
     description = Column(String)
     steps = Column(JSONB)
     tools = Column(JSONB, nullable=True)  # e.g., ["new_user_form", "temp_account_assignment"]
+    
+    # Relationships
+    suggested_forms = relationship("FormDefinition", back_populates="suggested_walkthrough")

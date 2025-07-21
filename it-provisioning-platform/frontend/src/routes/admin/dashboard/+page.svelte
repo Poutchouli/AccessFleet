@@ -120,8 +120,9 @@
 		<tr>
 			<th>ID</th>
 			<th>Status</th>
-			<th>Submitted By (ID)</th>
-			<th>Form Definition ID</th>
+			<th>Submitted By</th>
+			<th>Form</th>
+			<th>Assigned Account</th>
 			<th>Change Status</th>
 		</tr>
 	</thead>
@@ -134,8 +135,35 @@
 						{req.status}
 					</span>
 				</td>
-				<td>{req.submitted_by_manager_id}</td>
-				<td>{req.form_definition_id}</td>
+				<td>
+					{#if req.submitted_by}
+						<div class="user-compact">
+							<strong>{req.submitted_by.full_name}</strong>
+							<br><small>{req.submitted_by.service || 'No service'}</small>
+						</div>
+					{:else}
+						<em>Unknown</em>
+					{/if}
+				</td>
+				<td>
+					{#if req.form_definition}
+						<strong>{req.form_definition.name}</strong>
+					{:else}
+						<em>Unknown Form</em>
+					{/if}
+				</td>
+				<td>
+					{#if req.assigned_temp_account}
+						<div class="account-compact">
+							<strong>{req.assigned_temp_account.display_name}</strong>
+							<br><small class="status-badge {req.assigned_temp_account.is_in_use ? 'status-in-use' : 'status-available'}">
+								{req.assigned_temp_account.is_in_use ? 'In Use' : 'Available'}
+							</small>
+						</div>
+					{:else}
+						<em>Not Assigned</em>
+					{/if}
+				</td>
 				<td>
 					<select on:change={(e) => changeStatus(req.id, e.target.value)} value={req.status}>
 						<option value="pending">Pending</option>
@@ -198,6 +226,30 @@
 		padding: 0.25rem;
 		border: 1px solid #ccc;
 		border-radius: 0.25rem;
+	}
+
+	.user-compact, .account-compact {
+		line-height: 1.3;
+	}
+
+	.user-compact strong, .account-compact strong {
+		font-size: 0.9em;
+		color: #2d3436;
+	}
+
+	.user-compact small, .account-compact small {
+		color: #636e72;
+		font-size: 0.75em;
+	}
+
+	.status-in-use {
+		background-color: #fee2e2;
+		color: #991b1b;
+	}
+
+	.status-available {
+		background-color: #d1fae5;
+		color: #065f46;
 	}
 
 	.connection-status {
