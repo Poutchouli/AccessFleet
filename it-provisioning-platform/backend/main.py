@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import inspect, text  # Added inspect and text for database exploration
 from pydantic import BaseModel
 from typing import Any
 import models, schemas, crud, auth
@@ -661,3 +662,39 @@ async def create_mailbox_modification_request(
     # })
     
     return db_request
+
+# ===========================
+# DATABASE EXPLORER ENDPOINTS
+# ===========================
+
+@app.get("/admin/db/tables", response_model=list[str], dependencies=[Depends(auth.require_admin)])
+def get_table_names(db: Session = Depends(get_db)):
+    """Get a list of all table names in the database for admin exploration."""
+    inspector = inspect(db.get_bind())
+    return inspector.get_table_names()
+
+@app.get("/admin/db/tables/{table_name}", response_model=list[dict], dependencies=[Depends(auth.require_admin)])
+def get_table_content(table_name: str, db: Session = Depends(get_db)):
+    """Get the content of a specific table (limited to first 100 rows)."""
+    inspector = inspect(db.get_bind())
+    if table_name not in inspector.get_table_names():
+        raise HTTPException(status_code=404, detail="Table not found")
+    
+    try:
+        # Using raw SQL for dynamic table querying
+        # Limit to 100 rows to prevent overwhelming the UI
+        query = text(f"SELECT * FROM {table_name} LIMIT 100")
+        result = db.execute(query)
+        
+        # Convert the result rows to a list of dictionaries
+        rows = result.fetchall()
+        if not rows:
+            return []
+        
+        # Get column names from the result
+        column_names = result.keys()
+        
+        # Convert rows to dictionaries
+        return [dict(zip(column_names, row)) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error querying table: {str(e)}")

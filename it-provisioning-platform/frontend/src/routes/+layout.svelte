@@ -71,6 +71,7 @@
 			<a href="/admin/initialize">Admin: Initialize Data</a>
 			<a href="/admin/analytics">Admin: Analytics</a>
 			<a href="/admin/audit">Admin: Audit Log</a>
+			<a href="/admin/db-explorer">Admin: DB Explorer</a>
 		{/if}
 
 		<div class="controls">

@@ -22,7 +22,8 @@ export const nodes = [
 	() => import('./nodes/18'),
 	() => import('./nodes/19'),
 	() => import('./nodes/20'),
-	() => import('./nodes/21')
+	() => import('./nodes/21'),
+	() => import('./nodes/22')
 ];
 
 export const server_loads = [];
@@ -32,22 +33,23 @@ export const dictionary = {
 		"/admin/analytics": [3],
 		"/admin/audit": [4],
 		"/admin/dashboard": [5],
-		"/admin/forms": [6],
-		"/admin/forms/builder": [8],
-		"/admin/forms/[id]": [7],
-		"/admin/initialize": [9],
-		"/admin/new-user": [10],
-		"/admin/temp-accounts": [11],
-		"/admin/walkthroughs": [12],
-		"/admin/walkthroughs/create": [13],
-		"/admin/walkthroughs/edit/[id]": [14],
-		"/mailboxes": [15],
-		"/requests": [16],
-		"/requests/new": [18],
-		"/requests/[id]": [17],
-		"/shared-mailboxes": [19],
-		"/test-api": [20],
-		"/users": [21]
+		"/admin/db-explorer": [6],
+		"/admin/forms": [7],
+		"/admin/forms/builder": [9],
+		"/admin/forms/[id]": [8],
+		"/admin/initialize": [10],
+		"/admin/new-user": [11],
+		"/admin/temp-accounts": [12],
+		"/admin/walkthroughs": [13],
+		"/admin/walkthroughs/create": [14],
+		"/admin/walkthroughs/edit/[id]": [15],
+		"/mailboxes": [16],
+		"/requests": [17],
+		"/requests/new": [19],
+		"/requests/[id]": [18],
+		"/shared-mailboxes": [20],
+		"/test-api": [21],
+		"/users": [22]
 	};
 
 export const hooks = {
