@@ -1,65 +1,282 @@
+# ===========================
+# NODE.JS / FRONTEND
+# ===========================
 # Dependencies
 node_modules/
 */node_modules/
-
-# Build outputs
-frontend/.svelte-kit/
-frontend/build/
-frontend/dist/
-
-# Python
-backend/__pycache__/
-backend/*.pyc
-backend/*.pyo
-backend/*.pyd
-backend/.Python
-backend/env/
-backend/venv/
-backend/.venv/
-backend/pip-log.txt
-backend/pip-delete-this-directory.txt
-backend/.tox/
-backend/.coverage
-backend/.coverage.*
-backend/.cache
-backend/nosetests.xml
-backend/coverage.xml
-backend/*.cover
-backend/*.log
-backend/.git
-backend/.mypy_cache
-backend/.pytest_cache
-backend/.hypothesis
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Docker
-.dockerignore
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Build outputs
+frontend/.svelte-kit/
+frontend/build/
+frontend/dist/
+frontend/.output/
+
+# SvelteKit specific
+.svelte-kit/
+build/
+dist/
+
+# Package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ===========================
+# PYTHON / BACKEND
+# ===========================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+backend/env/
+backend/venv/
+backend/.venv/
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ===========================
+# DATABASE
+# ===========================
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# PostgreSQL dumps
+*.sql
+*.dump
+
+# Database migration files (keep structure, ignore data)
+# migrations/versions/
+alembic.ini
+
+# ===========================
+# ENVIRONMENT & CONFIG
+# ===========================
+# Environment variables
+.env
+.env.*
+!.env.example
+.envrc
+
+# Local configuration
+config/local.py
+settings/local.py
+
+# ===========================
+# DOCKER
+# ===========================
+# Docker override files
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# ===========================
+# IDE & EDITORS
+# ===========================
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# PyCharm / IntelliJ
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===========================
+# OS SPECIFIC
+# ===========================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===========================
+# LOGS & TEMPORARY FILES
+# ===========================
+logs/
+*.log
+*.log.*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*.backup
+*.swp
+*.swo
+
+# ===========================
+# SECURITY & SENSITIVE DATA
+# ===========================
+# API keys and secrets
+secrets/
+*.key
+*.pem
+*.p12
+*.crt
+*.cer
+
+# CSV files with sensitive data (uncomment if needed)
+# *.csv
+# sample_*.csv
+
+# Test data files (uncomment if needed)
+# test_*.csv
+# test-*.json
+
+# ===========================
+# MISCELLANEOUS
+# ===========================
+# Backup files
+*.orig
+*.rej
+
+# Archive files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Generated documentation
+docs/_build/
+docs/site/
