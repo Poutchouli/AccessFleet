@@ -1,6 +1,10 @@
 <script>
+	import { onMount } from 'svelte';
+
 	let formName = '';
 	let formDescription = '';
+	let selectedWalkthroughId = null;
+	let walkthroughTemplates = [];
 	let elements = [
 		{
 			type: 'text',
@@ -13,6 +17,15 @@
 	let saving = false;
 	let saveSuccess = false;
 	let saveError = null;
+
+	onMount(async () => {
+		try {
+			const response = await fetch('/api/admin/walkthrough-templates');
+			walkthroughTemplates = await response.json();
+		} catch (error) {
+			console.error('Failed to load walkthrough templates:', error);
+		}
+	});
 
 	function addElement() {
 		elements = [...elements, {
@@ -56,7 +69,8 @@
 				body: JSON.stringify({
 					name: formName,
 					description: formDescription,
-					schema: formSchema
+					schema: formSchema,
+					suggested_walkthrough_id: selectedWalkthroughId
 				})
 			});
 
@@ -134,6 +148,14 @@
 	.form-group textarea {
 		resize: vertical;
 		min-height: 60px;
+	}
+
+	.help-text {
+		display: block;
+		margin-top: 5px;
+		font-size: 12px;
+		color: #666;
+		font-style: italic;
 	}
 
 	.element-item {
@@ -263,6 +285,16 @@
 		<div class="form-group">
 			<label for="form-description">Description</label>
 			<textarea id="form-description" bind:value={formDescription} placeholder="Brief description of this form"></textarea>
+		</div>
+		<div class="form-group">
+			<label for="walkthrough-select">Suggested Walkthrough (Optional)</label>
+			<select id="walkthrough-select" bind:value={selectedWalkthroughId}>
+				<option value={null}>-- None --</option>
+				{#each walkthroughTemplates as template}
+					<option value={template.id}>{template.name}</option>
+				{/each}
+			</select>
+			<small class="help-text">Select a walkthrough that administrators should follow when processing requests from this form</small>
 		</div>
 	</div>
 

@@ -20,7 +20,8 @@ def create_form_definition(db: Session, form: schemas.FormDefinitionCreate, user
         name=form.name,
         description=form.description,
         schema=form.form_schema,
-        created_by_admin_id=user_id
+        created_by_admin_id=user_id,
+        suggested_walkthrough_id=form.suggested_walkthrough_id
     )
     db.add(db_form)
     db.commit()

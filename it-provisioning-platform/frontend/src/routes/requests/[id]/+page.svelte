@@ -14,22 +14,32 @@
 	const requestId = $page.params.id;
 
 	onMount(async () => {
-		// Fetch all necessary data in parallel
-		const [reqRes, tplRes, accRes] = await Promise.all([
-			fetch(`/api/requests/${requestId}`),
-			fetch('/api/admin/walkthrough-templates'),
-			fetch('/api/admin/temp-accounts')
-		]);
+		// Fetch request data first to get form_definition_id
+		const reqRes = await fetch(`/api/requests/${requestId}`);
 		request = await reqRes.json();
+
+		// Fetch all necessary data in parallel
+		const [tplRes, accRes, formDefRes] = await Promise.all([
+			fetch('/api/admin/walkthrough-templates'),
+			fetch('/api/admin/temp-accounts'),
+			fetch(`/api/form-definitions/${request.form_definition_id}`)
+		]);
+		
 		templates = await tplRes.json();
 		allAccounts = await accRes.json();
+		const formDef = await formDefRes.json();
 		availableTempAccounts = allAccounts.filter(acc => !acc.is_in_use);
 
-		// Load saved checklist state if it exists
+		// Set the suggested walkthrough by default
+		if (formDef.suggested_walkthrough_id) {
+			selectedTemplateId = formDef.suggested_walkthrough_id;
+		}
+
+		// Load saved checklist state if it exists, potentially overriding the suggestion
 		if (request.walkthrough_state) {
 			checklistState = request.walkthrough_state;
 			// Find which template was saved
-			selectedTemplateId = templates.find(t => t.id === checklistState.templateId)?.id;
+			selectedTemplateId = templates.find(t => t.id === checklistState.templateId)?.id || selectedTemplateId;
 		}
 	});
 

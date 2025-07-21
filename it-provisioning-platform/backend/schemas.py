@@ -22,6 +22,7 @@ class FormDefinitionBase(BaseModel):
     name: str
     description: str | None = None
     form_schema: dict[str, Any] = Field(..., alias="schema")  # Use alias to avoid shadowing
+    suggested_walkthrough_id: int | None = None
 
 class FormDefinitionCreate(FormDefinitionBase):
     pass

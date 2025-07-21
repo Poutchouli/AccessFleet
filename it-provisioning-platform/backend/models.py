@@ -58,6 +58,7 @@ class FormDefinition(Base):
     description = Column(String, nullable=True)
     schema = Column(JSONB)  # Column for the form builder's JSON output
     created_by_admin_id = Column(Integer, ForeignKey("users.id"))
+    suggested_walkthrough_id = Column(Integer, ForeignKey("walkthrough_templates.id"), nullable=True)
 
 class Request(Base):
     __tablename__ = "requests"
