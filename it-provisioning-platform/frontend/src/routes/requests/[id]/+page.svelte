@@ -14,25 +14,23 @@
 	const requestId = $page.params.id;
 
 	onMount(async () => {
-		// Fetch request data first to get form_definition_id
+		// Fetch request data first to get form_definition
 		const reqRes = await fetch(`/api/requests/${requestId}`);
 		request = await reqRes.json();
 
 		// Fetch all necessary data in parallel
-		const [tplRes, accRes, formDefRes] = await Promise.all([
+		const [tplRes, accRes] = await Promise.all([
 			fetch('/api/admin/walkthrough-templates'),
-			fetch('/api/admin/temp-accounts'),
-			fetch(`/api/form-definitions/${request.form_definition_id}`)
+			fetch('/api/admin/temp-accounts')
 		]);
 		
 		templates = await tplRes.json();
 		allAccounts = await accRes.json();
-		const formDef = await formDefRes.json();
 		availableTempAccounts = allAccounts.filter(acc => !acc.is_in_use);
 
-		// Set the suggested walkthrough by default
-		if (formDef.suggested_walkthrough_id) {
-			selectedTemplateId = formDef.suggested_walkthrough_id;
+		// Set the suggested walkthrough by default from the form definition
+		if (request.form_definition?.suggested_walkthrough_id) {
+			selectedTemplateId = request.form_definition.suggested_walkthrough_id;
 		}
 
 		// Load saved checklist state if it exists, potentially overriding the suggestion
@@ -47,9 +45,7 @@
 	$: selectedTemplate = templates.find(t => t.id === selectedTemplateId);
 
 	// Computed property to get assigned account details
-	$: assignedAccount = request?.assigned_temp_account_id 
-		? allAccounts.find(a => a.id === request.assigned_temp_account_id) 
-		: null;
+	$: assignedAccount = request?.assigned_temp_account || null;
 
 	function handleTemplateSelect(event) {
 		selectedTemplateId = parseInt(event.target.value);
@@ -133,10 +129,31 @@
 					<span class="status status-{request.status}">{request.status}</span>
 				</div>
 				<div class="info-item">
-					<strong>Submitted By:</strong> User ID {request.submitted_by_manager_id}
+					<strong>Submitted By:</strong>
+					{#if request.submitted_by}
+						<div class="user-info">
+							<div class="user-name">{request.submitted_by.full_name}</div>
+							<div class="user-details">{request.submitted_by.email}</div>
+							{#if request.submitted_by.service}
+								<div class="user-service">📍 {request.submitted_by.service}</div>
+							{/if}
+						</div>
+					{:else}
+						<span class="unknown">Unknown User</span>
+					{/if}
 				</div>
 				<div class="info-item">
-					<strong>Form ID:</strong> {request.form_definition_id}
+					<strong>Using Form:</strong>
+					{#if request.form_definition}
+						<div class="form-info">
+							<div class="form-name">{request.form_definition.name}</div>
+							{#if request.form_definition.description}
+								<div class="form-description">{request.form_definition.description}</div>
+							{/if}
+						</div>
+					{:else}
+						<span class="unknown">Unknown Form</span>
+					{/if}
 				</div>
 			</div>
 
@@ -150,47 +167,45 @@
 				{/each}
 			</div>
 
-			<h4>TEMP Account Assignment</h4>
-			<div class="temp-account-section">
-				{#if request.assigned_temp_account_id}
-					<div class="assigned-account">
-						<div class="account-info">
-							<strong>Account Assigned:</strong>
-							{#if assignedAccount}
+			{#if selectedTemplate?.tools?.includes('temp_account_assignment')}
+				<h4>TEMP Account Assignment</h4>
+				<div class="temp-account-section">
+					{#if request.assigned_temp_account}
+						<div class="assigned-account">
+							<div class="account-info">
+								<strong>Account Assigned:</strong>
 								<div class="account-details">
 									<div><strong>Display Name:</strong> {assignedAccount.display_name}</div>
 									<div><strong>UPN:</strong> {assignedAccount.user_principal_name}</div>
 									<div class="status-badge assigned">✓ Assigned</div>
 								</div>
-							{:else}
-								<span class="account-id">ID: {request.assigned_temp_account_id}</span>
+							</div>
+						</div>
+					{:else}
+						<div class="assignment-controls">
+							<label for="account-select">Select Available TEMP Account:</label>
+							<div class="assignment-row">
+								<select id="account-select" bind:value={selectedTempAccountId}>
+									<option value={null}>-- Select available account --</option>
+									{#each availableTempAccounts as acc}
+										<option value={acc.id}>{acc.display_name} ({acc.user_principal_name})</option>
+									{/each}
+								</select>
+								<button 
+									class="assign-btn" 
+									on:click={assignAccount} 
+									disabled={!selectedTempAccountId}
+								>
+									Assign Account
+								</button>
+							</div>
+							{#if availableTempAccounts.length === 0}
+								<p class="no-accounts">No available TEMP accounts found.</p>
 							{/if}
 						</div>
-					</div>
-				{:else}
-					<div class="assignment-controls">
-						<label for="account-select">Select Available TEMP Account:</label>
-						<div class="assignment-row">
-							<select id="account-select" bind:value={selectedTempAccountId}>
-								<option value={null}>-- Select available account --</option>
-								{#each availableTempAccounts as acc}
-									<option value={acc.id}>{acc.display_name} ({acc.user_principal_name})</option>
-								{/each}
-							</select>
-							<button 
-								class="assign-btn" 
-								on:click={assignAccount} 
-								disabled={!selectedTempAccountId}
-							>
-								Assign Account
-							</button>
-						</div>
-						{#if availableTempAccounts.length === 0}
-							<p class="no-accounts">No available TEMP accounts found.</p>
-						{/if}
-					</div>
-				{/if}
-			</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<div class="walkthrough-pane">
@@ -524,6 +539,31 @@
 		background: #e9ecef;
 		padding: 0.25rem 0.5rem;
 		border-radius: 3px;
+	}
+
+	.user-info, .form-info {
+		margin-top: 0.5rem;
+	}
+
+	.user-name, .form-name {
+		font-weight: 600;
+		color: #2d3436;
+		margin-bottom: 0.25rem;
+	}
+
+	.user-details, .user-service, .form-description {
+		font-size: 0.9em;
+		color: #636e72;
+		margin-bottom: 0.25rem;
+	}
+
+	.user-service {
+		font-style: italic;
+	}
+
+	.unknown {
+		color: #e74c3c;
+		font-style: italic;
 	}
 
 	@media (max-width: 768px) {

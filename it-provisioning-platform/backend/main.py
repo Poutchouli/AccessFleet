@@ -172,7 +172,7 @@ async def update_request_status(
 # Get a specific request by ID
 @app.get("/requests/{request_id}", response_model=schemas.Request)
 def read_request(request_id: int, db: Session = Depends(get_db)):
-    db_request = db.query(models.Request).filter(models.Request.id == request_id).first()
+    db_request = crud.get_request(db, request_id)
     if db_request is None:
         raise HTTPException(status_code=404, detail="Request not found")
     return db_request

@@ -60,6 +60,20 @@ def get_requests(db: Session, skip: int = 0, limit: int = 100, service: str | No
         
     return query.order_by(models.Request.timestamp.desc()).offset(skip).limit(limit).all()
 
+def get_request(db: Session, request_id: int):
+    """Get a single request with all related data eagerly loaded"""
+    return (
+        db.query(models.Request)
+        .options(
+            joinedload(models.Request.submitted_by),
+            joinedload(models.Request.processed_by),
+            joinedload(models.Request.form_definition),
+            joinedload(models.Request.assigned_temp_account)
+        )
+        .filter(models.Request.id == request_id)
+        .first()
+    )
+
 def get_temp_accounts(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.TempAccount).offset(skip).limit(limit).all()
 
