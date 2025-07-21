@@ -72,6 +72,7 @@
 			<a href="/admin/analytics">Admin: Analytics</a>
 			<a href="/admin/audit">Admin: Audit Log</a>
 			<a href="/admin/db-explorer">Admin: DB Explorer</a>
+			<a href="/admin/permissions">Admin: Permissions</a>
 		{/if}
 
 		<div class="controls">
