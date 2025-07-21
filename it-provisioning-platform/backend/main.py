@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from typing import Any
-import models, schemas, crud
+import models, schemas, crud, auth
 from database import engine, get_db
 from ws_manager import manager
 from models import RequestStatus
@@ -470,3 +470,95 @@ async def upload_shared_mailboxes_csv(file: UploadFile = File(...), db: Session 
 def read_shared_mailboxes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     mailboxes = db.query(models.SharedMailbox).offset(skip).limit(limit).all()
     return mailboxes
+
+# =======================
+# AUTHENTICATION & RBAC ENDPOINTS
+# =======================
+
+# Simple endpoint to get user by ID for frontend authentication
+@app.get("/users/{user_id}", response_model=schemas.User)
+def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+    """Get user details by ID for session management."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+# Get shared mailboxes visible to current manager
+@app.get("/manager/shared-mailboxes", response_model=list[schemas.SharedMailbox])
+def get_manager_mailboxes(current_user: models.User = Depends(auth.require_manager), db: Session = Depends(get_db)):
+    """Get shared mailboxes that the current manager is allowed to see."""
+    # If manager has no specific permissions, return empty list
+    return current_user.visible_mailboxes
+
+# Admin endpoint to grant mailbox visibility to manager
+@app.post("/admin/permissions/mailbox-to-manager")
+def grant_mailbox_visibility(
+    manager_id: int, 
+    mailbox_id: int, 
+    current_admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(get_db)
+):
+    """Allow an admin to grant a manager visibility to a specific shared mailbox."""
+    manager = db.query(models.User).filter(models.User.id == manager_id).first()
+    mailbox = db.query(models.SharedMailbox).filter(models.SharedMailbox.id == mailbox_id).first()
+
+    if not manager or not mailbox:
+        raise HTTPException(status_code=404, detail="Manager or Mailbox not found")
+    if manager.role.value != 'manager':
+        raise HTTPException(status_code=400, detail="User is not a manager")
+
+    # Check if permission already exists
+    if mailbox in manager.visible_mailboxes:
+        raise HTTPException(status_code=400, detail="Manager already has access to this mailbox")
+
+    manager.visible_mailboxes.append(mailbox)
+    db.commit()
+    return {"message": f"Manager {manager.full_name} can now see mailbox {mailbox.display_name}"}
+
+# Admin endpoint to revoke mailbox visibility from manager
+@app.delete("/admin/permissions/mailbox-to-manager")
+def revoke_mailbox_visibility(
+    manager_id: int, 
+    mailbox_id: int, 
+    current_admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(get_db)
+):
+    """Allow an admin to revoke a manager's visibility to a specific shared mailbox."""
+    manager = db.query(models.User).filter(models.User.id == manager_id).first()
+    mailbox = db.query(models.SharedMailbox).filter(models.SharedMailbox.id == mailbox_id).first()
+
+    if not manager or not mailbox:
+        raise HTTPException(status_code=404, detail="Manager or Mailbox not found")
+
+    # Check if permission exists
+    if mailbox not in manager.visible_mailboxes:
+        raise HTTPException(status_code=400, detail="Manager does not have access to this mailbox")
+
+    manager.visible_mailboxes.remove(mailbox)
+    db.commit()
+    return {"message": f"Manager {manager.full_name} can no longer see mailbox {mailbox.display_name}"}
+
+# Get all manager-mailbox permissions (for admin interface)
+@app.get("/admin/permissions/manager-mailboxes")
+def get_all_manager_permissions(
+    current_admin: models.User = Depends(auth.require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all manager-mailbox permission mappings for admin interface."""
+    managers = db.query(models.User).filter(models.User.role == models.UserRole.manager).all()
+    permissions = []
+    for manager in managers:
+        permissions.append({
+            "manager_id": manager.id,
+            "manager_name": manager.full_name,
+            "visible_mailboxes": [
+                {
+                    "id": mailbox.id,
+                    "display_name": mailbox.display_name,
+                    "primary_smtp_address": mailbox.primary_smtp_address
+                }
+                for mailbox in manager.visible_mailboxes
+            ]
+        })
+    return permissions

@@ -1,30 +1,80 @@
 <script>
 	import { onMount } from 'svelte';
-	
+	import { user } from '$lib/stores/session.js';
+
 	let mailboxes = [];
-	let loading = true;
+	let isLoading = true;
 	let error = null;
 
-	onMount(async () => {
+	async function loadMailboxes() {
+		if (!$user) {
+			error = "Please log in to view shared mailboxes";
+			isLoading = false;
+			return;
+		}
+
 		try {
-			const response = await fetch('/api/shared-mailboxes');
-			if (!response.ok) {
-				throw new Error('Failed to fetch shared mailboxes');
+			let url = '/api/shared-mailboxes'; // Default for admins
+			
+			// If user is a manager, use the manager-specific endpoint
+			if ($user.role === 'manager') {
+				url = '/api/manager/shared-mailboxes';
 			}
+
+			const response = await fetch(url, {
+				headers: {
+					'user-id': $user.id.toString()
+				}
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to fetch shared mailboxes: ${response.statusText}`);
+			}
+
 			mailboxes = await response.json();
 		} catch (err) {
 			error = err.message;
 		} finally {
-			loading = false;
+			isLoading = false;
 		}
+	}
+
+	onMount(() => {
+		loadMailboxes();
 	});
+
+	// Reactive statement to reload data when user changes
+	$: if ($user) {
+		isLoading = true;
+		error = null;
+		loadMailboxes();
+	}
 </script>
 
-<div class="container">
-	<h2>📮 Shared Mailboxes</h2>
-	<p>View all imported shared mailboxes and their access permissions.</p>
+<svelte:head>
+	<title>Shared Mailboxes - IT Provisioning Platform</title>
+</svelte:head>
 
-	{#if loading}
+<div class="container">
+	<h2>
+		{#if $user?.role === 'manager'}
+			📮 My Assigned Shared Mailboxes
+		{:else}
+			📮 All Shared Mailboxes
+		{/if}
+	</h2>
+	
+	{#if $user?.role === 'manager'}
+		<p>View the shared mailboxes you have been granted access to by your administrator.</p>
+	{:else}
+		<p>View all imported shared mailboxes and their access permissions.</p>
+	{/if}
+
+	{#if !$user}
+		<div class="error">
+			<p>Please log in to view shared mailboxes.</p>
+		</div>
+	{:else if isLoading}
 		<div class="loading">
 			<p>Loading mailboxes...</p>
 		</div>
@@ -56,11 +106,20 @@
 			{/each}
 		</div>
 		<div class="summary">
-			<p><strong>Total Shared Mailboxes:</strong> {mailboxes.length}</p>
+			{#if $user.role === 'manager'}
+				<p><strong>Your Assigned Mailboxes:</strong> {mailboxes.length}</p>
+			{:else}
+				<p><strong>Total Shared Mailboxes:</strong> {mailboxes.length}</p>
+			{/if}
 		</div>
 	{:else}
 		<div class="empty-state">
-			<p>No shared mailboxes found. Use the <a href="/admin/initialize">Data Initialization</a> page to import mailboxes from your Exchange environment.</p>
+			{#if $user.role === 'manager'}
+				<p>You don't have access to any shared mailboxes yet.</p>
+				<p>Please contact your administrator to grant access to specific mailboxes.</p>
+			{:else}
+				<p>No shared mailboxes found. Use the <a href="/admin/initialize">Data Initialization</a> page to import mailboxes from your Exchange environment.</p>
+			{/if}
 		</div>
 	{/if}
 </div>

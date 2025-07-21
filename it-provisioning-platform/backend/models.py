@@ -1,11 +1,20 @@
 from sqlalchemy import (
     Boolean, Column, Integer, String, Enum as SQLAlchemyEnum, 
-    ForeignKey, DateTime, Text
+    ForeignKey, DateTime, Text, Table
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from database import Base
 import enum
+
+# Association table for many-to-many relationship between managers and shared mailboxes
+manager_mailbox_association = Table(
+    "manager_mailbox_association",
+    Base.metadata,
+    Column("manager_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("mailbox_id", Integer, ForeignKey("shared_mailboxes.id"), primary_key=True),
+)
 
 class UserRole(str, enum.Enum):
     manager = "manager"
@@ -24,6 +33,13 @@ class User(Base):
     full_name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     role = Column(SQLAlchemyEnum(UserRole))
+    
+    # Relationship: managers can see specific shared mailboxes
+    visible_mailboxes = relationship(
+        "SharedMailbox",
+        secondary=manager_mailbox_association,
+        back_populates="visible_to_managers"
+    )
 
 class FormDefinition(Base):
     __tablename__ = "form_definitions"
@@ -63,6 +79,13 @@ class SharedMailbox(Base):
     display_name = Column(String, index=True)
     primary_smtp_address = Column(String, unique=True, index=True)
     full_access_users = Column(Text, nullable=True)  # Semicolon-separated list of users
+    
+    # Relationship: shared mailboxes can be visible to specific managers
+    visible_to_managers = relationship(
+        "User",
+        secondary=manager_mailbox_association,
+        back_populates="visible_mailboxes"
+    )
 
 class AuditLog(Base):
     __tablename__ = "audit_log"

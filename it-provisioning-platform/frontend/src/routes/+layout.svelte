@@ -1,6 +1,7 @@
 <script>
 	import { locale, _, isLoading } from 'svelte-i18n';
 	import { commandQueue } from '$lib/stores/commandQueue.js'; // Import our queue store
+	import { user, login, logout } from '$lib/stores/session.js'; // Import session store
 	import '../lib/i18n.js'; // Import to initialize
 	import { onMount } from 'svelte';
 
@@ -28,22 +29,47 @@
 		commandQueue.set([]);
 		showQueueModal = false;
 	}
+
+	// Handle login selection
+	function handleLoginChange(event) {
+		const userId = event.target.value;
+		if (userId) {
+			login(userId);
+		}
+		// Reset the select to show placeholder
+		event.target.selectedIndex = 0;
+	}
 </script>
 
 <header>
 	<h1>{!$isLoading ? $_('app.title') : 'IT Provisioning Platform'}</h1>
 	<nav>
-		<a href="/">Home</a>
-		<a href="/users">Users</a>
-		<a href="/shared-mailboxes">Shared Mailboxes</a>
-		<a href="/requests">View Requests</a>
-		<a href="/admin/dashboard">Admin: Dashboard</a>
-		<a href="/admin/forms">Admin: Forms</a>
-		<a href="/admin/temp-accounts">Admin: TEMP Accounts</a>
-		<a href="/admin/new-user">Admin: New User</a>
-		<a href="/admin/initialize">Admin: Initialize Data</a>
-		<a href="/admin/analytics">Admin: Analytics</a>
-		<a href="/admin/audit">Admin: Audit Log</a>
+		<!-- Navigation for unlogged users -->
+		{#if !$user}
+			<a href="/">Home</a>
+		{/if}
+
+		<!-- Navigation for managers -->
+		{#if $user && $user.role === 'manager'}
+			<a href="/requests">View My Requests</a>
+			<a href="/requests/new">Submit New Request</a>
+			<a href="/shared-mailboxes">My Shared Mailboxes</a>
+		{/if}
+
+		<!-- Navigation for admins -->
+		{#if $user && $user.role === 'admin'}
+			<a href="/">Home</a>
+			<a href="/users">Users</a>
+			<a href="/shared-mailboxes">Shared Mailboxes</a>
+			<a href="/requests">View Requests</a>
+			<a href="/admin/dashboard">Admin: Dashboard</a>
+			<a href="/admin/forms">Admin: Forms</a>
+			<a href="/admin/temp-accounts">Admin: TEMP Accounts</a>
+			<a href="/admin/new-user">Admin: New User</a>
+			<a href="/admin/initialize">Admin: Initialize Data</a>
+			<a href="/admin/analytics">Admin: Analytics</a>
+			<a href="/admin/audit">Admin: Audit Log</a>
+		{/if}
 
 		<div class="controls">
 			{#if $commandQueue.length > 0}
@@ -51,6 +77,19 @@
 					Command Queue ({$commandQueue.length})
 				</button>
 			{/if}
+
+			<!-- User authentication controls -->
+			{#if $user}
+				<span>Welcome, {$user.full_name} ({$user.role})</span>
+				<button on:click={logout} class="auth-button">Logout</button>
+			{:else}
+				<select on:change={handleLoginChange} class="login-select">
+					<option value="">Login As...</option>
+					<option value="1">Admin User (ID 1)</option>
+					<option value="2">Manager User (ID 2)</option>
+				</select>
+			{/if}
+
 			<div class="lang-switcher">
 				<button class:active={$locale === 'en'} on:click={() => locale.set('en')}>EN</button>
 				<button class:active={$locale === 'fr'} on:click={() => locale.set('fr')}>FR</button>
@@ -175,5 +214,35 @@
 	}
 	.modal button:hover {
 		background-color: #2a4a7c;
+	}
+
+	/* Authentication styling */
+	.auth-button {
+		background-color: #e53e3e;
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 5px;
+		cursor: pointer;
+		font-weight: bold;
+		margin-left: 0.5rem;
+	}
+	.auth-button:hover {
+		background-color: #c53030;
+	}
+
+	.login-select {
+		padding: 0.5rem;
+		border: 1px solid #cbd5e0;
+		border-radius: 5px;
+		background-color: white;
+		cursor: pointer;
+		font-weight: bold;
+	}
+
+	.controls span {
+		color: #2d3748;
+		font-weight: bold;
+		margin-right: 0.5rem;
 	}
 </style>
