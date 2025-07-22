@@ -24,7 +24,8 @@ export const nodes = [
 	() => import('./nodes/20'),
 	() => import('./nodes/21'),
 	() => import('./nodes/22'),
-	() => import('./nodes/23')
+	() => import('./nodes/23'),
+	() => import('./nodes/24')
 ];
 
 export const server_loads = [];
@@ -41,17 +42,18 @@ export const dictionary = {
 		"/admin/initialize": [10],
 		"/admin/new-user": [11],
 		"/admin/permissions": [12],
-		"/admin/temp-accounts": [13],
-		"/admin/walkthroughs": [14],
-		"/admin/walkthroughs/create": [15],
-		"/admin/walkthroughs/edit/[id]": [16],
-		"/mailboxes": [17],
-		"/requests": [18],
-		"/requests/new": [20],
-		"/requests/[id]": [19],
-		"/shared-mailboxes": [21],
-		"/test-api": [22],
-		"/users": [23]
+		"/admin/sql-runner": [13],
+		"/admin/temp-accounts": [14],
+		"/admin/walkthroughs": [15],
+		"/admin/walkthroughs/create": [16],
+		"/admin/walkthroughs/edit/[id]": [17],
+		"/mailboxes": [18],
+		"/requests": [19],
+		"/requests/new": [21],
+		"/requests/[id]": [20],
+		"/shared-mailboxes": [22],
+		"/test-api": [23],
+		"/users": [24]
 	};
 
 export const hooks = {

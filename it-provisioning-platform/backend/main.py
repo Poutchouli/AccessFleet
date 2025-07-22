@@ -248,49 +248,6 @@ def get_temp_accounts(skip: int = 0, limit: int = 100, db: Session = Depends(get
     accounts = crud.get_temp_accounts(db, skip=skip, limit=limit)
     return accounts
 
-@app.post("/admin/upload-temp-accounts-csv")
-async def upload_temp_accounts_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    if not file.filename or not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload a CSV.")
-
-    try:
-        # Read CSV content
-        contents = await file.read()
-        # Decode and read as a file-like object
-        stream = io.StringIO(contents.decode("utf-8"))
-        reader = csv.DictReader(stream)
-
-        synced_count = 0
-        updated_count = 0
-
-        for row in reader:
-            # Assumes CSV has 'displayName' and 'userPrincipalName' headers
-            upn = row.get("userPrincipalName")
-            display_name = row.get("displayName")
-
-            if not upn or not display_name:
-                continue
-
-            # Basic upsert logic
-            account = crud.get_temp_account_by_upn(db, upn)
-            if account:
-                # Update existing account if needed
-                setattr(account, 'display_name', display_name)
-                updated_count += 1
-            else:
-                # Create new account
-                account_data = schemas.TempAccountCreate(
-                    user_principal_name=upn,
-                    display_name=display_name
-                )
-                crud.create_temp_account(db, account_data)
-                synced_count += 1
-        
-        db.commit()
-        return {"message": f"Sync complete. Added: {synced_count}, Updated: {updated_count}."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing file: {e}")
-
 @app.put("/admin/temp-accounts/{account_id}/status", response_model=dict)
 def update_temp_account_status(
     account_id: int, 
@@ -698,3 +655,61 @@ def get_table_content(table_name: str, db: Session = Depends(get_db)):
         return [dict(zip(column_names, row)) for row in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error querying table: {str(e)}")
+
+# Schema for SQL query requests
+class SQLQuery(BaseModel):
+    query: str
+
+@app.post("/admin/sql-query", response_model=list[dict], dependencies=[Depends(auth.require_admin)])
+def execute_sql_query(sql_query: SQLQuery, db: Session = Depends(get_db)):
+    """Execute a SELECT query against the database. Only SELECT queries are allowed for security."""
+    query = sql_query.query.strip()
+    
+    # Basic validation to ensure it's a read-only query
+    if not query.lower().startswith("select"):
+        raise HTTPException(status_code=400, detail="Only SELECT queries are allowed for security reasons.")
+    
+    # Additional security: prevent potentially dangerous SQL keywords
+    dangerous_keywords = ['drop', 'delete', 'update', 'insert', 'alter', 'create', 'truncate']
+    query_lower = query.lower()
+    for keyword in dangerous_keywords:
+        if keyword in query_lower:
+            raise HTTPException(status_code=400, detail=f"Query contains restricted keyword: {keyword}")
+    
+    try:
+        result = db.execute(text(query))
+        rows = result.fetchall()
+        
+        if not rows:
+            return []
+        
+        # Get column names and convert to list of dictionaries
+        column_names = result.keys()
+        return [dict(zip(column_names, row)) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Query failed: {str(e)}")
+
+@app.post("/admin/generate-mailbox-commands", response_model=dict, dependencies=[Depends(auth.require_admin)])
+def generate_mailbox_commands(modification: schemas.MailboxModification, db: Session = Depends(get_db)):
+    """Generate PowerShell commands for mailbox permission modifications."""
+    commands = []
+    
+    # Generate commands for adding users
+    for user_email in modification.add_users:
+        commands.append(
+            f"Add-MailboxPermission -Identity '{modification.mailbox_name}' "
+            f"-User '{user_email}' -AccessRights FullAccess -Confirm:$false"
+        )
+    
+    # Generate commands for removing users
+    for user_email in modification.remove_users:
+        commands.append(
+            f"Remove-MailboxPermission -Identity '{modification.mailbox_name}' "
+            f"-User '{user_email}' -AccessRights FullAccess -Confirm:$false"
+        )
+    
+    return {
+        "commands": commands,
+        "mailbox_name": modification.mailbox_name,
+        "total_commands": len(commands)
+    }

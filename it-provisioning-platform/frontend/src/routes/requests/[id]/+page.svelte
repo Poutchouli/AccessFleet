@@ -110,6 +110,29 @@
 			alert(`Error: ${error.message}`);
 		}
 	}
+
+	async function approveMailboxRequest(modification) {
+		try {
+			const response = await fetch('/api/admin/generate-mailbox-commands', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(modification)
+			});
+			
+			if (!response.ok) {
+				throw new Error('Failed to generate mailbox commands');
+			}
+			
+			const result = await response.json();
+			
+			// Add all commands to the queue
+			commandQueue.update(q => [...q, ...result.commands]);
+			
+			alert(`✅ ${result.total_commands} mailbox command${result.total_commands === 1 ? '' : 's'} added to queue for ${result.mailbox_name}!`);
+		} catch (error) {
+			alert(`❌ Error: ${error.message}`);
+		}
+	}
 </script>
 
 {#if !request}
@@ -158,14 +181,60 @@
 			</div>
 
 			<h4>Submitted Data</h4>
-			<div class="form-data-grid">
-				{#each Object.entries(request.form_data) as [key, value]}
-					<div class="data-item">
-						<strong>{key}:</strong>
-						<span>{value}</span>
-					</div>
-				{/each}
-			</div>
+			{#if request.form_data.type === 'mailbox_modifications'}
+				<div class="mailbox-modifications">
+					<h5>📧 SharedMailbox Request</h5>
+					{#each request.form_data.modifications.modifications as mod}
+						<div class="modification-card">
+							<div class="mailbox-header">
+								<h6>📮 {mod.mailbox_name}</h6>
+							</div>
+							
+							<div class="modification-content">
+								{#if mod.add_users.length > 0}
+									<div class="user-changes add-users">
+										<strong>➕ Add Users:</strong>
+										<ul>
+											{#each mod.add_users as user}
+												<li class="user-item add">{user}</li>
+											{/each}
+										</ul>
+									</div>
+								{/if}
+								
+								{#if mod.remove_users.length > 0}
+									<div class="user-changes remove-users">
+										<strong>➖ Remove Users:</strong>
+										<ul>
+											{#each mod.remove_users as user}
+												<li class="user-item remove">{user}</li>
+											{/each}
+										</ul>
+									</div>
+								{/if}
+							</div>
+							
+							<div class="modification-actions">
+								<button 
+									class="approve-btn" 
+									on:click={() => approveMailboxRequest(mod)}
+								>
+									🚀 Queue PowerShell Commands
+								</button>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else}
+				<div class="form-data-grid">
+					{#each Object.entries(request.form_data) as [key, value]}
+						<div class="data-item">
+							<strong>{key}:</strong>
+							<span>{value}</span>
+						</div>
+					{/each}
+				</div>
+			{/if}
 
 			{#if selectedTemplate?.tools?.includes('temp_account_assignment')}
 				<h4>TEMP Account Assignment</h4>
@@ -580,5 +649,94 @@
 		.assign-btn {
 			margin-top: 0.5rem;
 		}
+	}
+
+	/* Mailbox Modification Styles */
+	.mailbox-modifications {
+		margin-top: 1rem;
+	}
+
+	.mailbox-modifications h5 {
+		color: #0984e3;
+		margin-bottom: 1rem;
+		font-size: 1.2rem;
+	}
+
+	.modification-card {
+		border: 1px solid #e1e8ed;
+		border-radius: 12px;
+		padding: 1.5rem;
+		margin-bottom: 1rem;
+		background: white;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+	}
+
+	.mailbox-header h6 {
+		margin: 0 0 1rem 0;
+		color: #2d3436;
+		font-size: 1.1rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 2px solid #e1e8ed;
+	}
+
+	.modification-content {
+		margin: 1rem 0;
+	}
+
+	.user-changes {
+		margin-bottom: 1rem;
+	}
+
+	.user-changes strong {
+		display: block;
+		margin-bottom: 0.5rem;
+		color: #2d3436;
+	}
+
+	.user-changes ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.user-item {
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.25rem;
+		border-radius: 6px;
+		font-weight: 500;
+	}
+
+	.user-item.add {
+		background: #d1fae5;
+		color: #065f46;
+		border-left: 4px solid #10b981;
+	}
+
+	.user-item.remove {
+		background: #fee2e2;
+		color: #991b1b;
+		border-left: 4px solid #ef4444;
+	}
+
+	.modification-actions {
+		margin-top: 1rem;
+		padding-top: 1rem;
+		border-top: 1px solid #e1e8ed;
+	}
+
+	.approve-btn {
+		background: #0984e3;
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 8px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background-color 0.2s;
+		font-size: 0.95rem;
+	}
+
+	.approve-btn:hover {
+		background: #0770d4;
 	}
 </style>

@@ -1,5 +1,5 @@
 <script>
-	import { locale, _, isLoading } from 'svelte-i18n';
+	import { locale, _ } from 'svelte-i18n';
 	import { commandQueue } from '$lib/stores/commandQueue.js'; // Import our queue store
 	import { user, login, logout } from '$lib/stores/session.js'; // Import session store
 	import '../lib/i18n.js'; // Import to initialize
@@ -42,78 +42,98 @@
 </script>
 
 <header>
-	<h1>{!$isLoading ? $_('app.title') : 'IT Provisioning Platform'}</h1>
+	<h1>{$_('app.title')}</h1>
 	<nav>
-		<!-- Navigation for unlogged users -->
 		{#if !$user}
 			<a href="/">Home</a>
 		{/if}
 
-		<!-- Navigation for managers -->
-		{#if $user && $user.role === 'manager'}
-			<a href="/requests">View My Requests</a>
-			<a href="/requests/new">Submit New Request</a>
-			<a href="/shared-mailboxes">My Shared Mailboxes</a>
-			<a href="/mailboxes">Manage Mailboxes</a>
-		{/if}
-
-		<!-- Navigation for admins -->
-		{#if $user && $user.role === 'admin'}
-			<a href="/">Home</a>
-			<a href="/users">Users</a>
-			<a href="/shared-mailboxes">Shared Mailboxes</a>
-			<a href="/requests">View Requests</a>
-			<a href="/admin/dashboard">Admin: Dashboard</a>
-			<a href="/admin/forms">Admin: Forms</a>
-			<a href="/admin/walkthroughs">Admin: Walkthroughs</a>
-			<a href="/admin/temp-accounts">Admin: TEMP Accounts</a>
-			<a href="/admin/new-user">Admin: New User</a>
-			<a href="/admin/initialize">Admin: Initialize Data</a>
-			<a href="/admin/analytics">Admin: Analytics</a>
-			<a href="/admin/audit">Admin: Audit Log</a>
-			<a href="/admin/db-explorer">Admin: DB Explorer</a>
-			<a href="/admin/permissions">Admin: Permissions</a>
-		{/if}
-
-		<div class="controls">
-			{#if $commandQueue.length > 0}
-				<button on:click={() => showQueueModal = true} class="queue-button">
-					Command Queue ({$commandQueue.length})
-				</button>
-			{/if}
-
-			<!-- User authentication controls -->
-			{#if $user}
-				<span>Welcome, {$user.full_name} ({$user.role})</span>
-				<button on:click={logout} class="auth-button">Logout</button>
-			{:else}
-				<select on:change={handleLoginChange} class="login-select">
-					<option value="">Login As...</option>
-					<option value="1">Admin User (ID 1)</option>
-					<option value="2">Manager User (ID 2 - Sarah)</option>
-					<option value="3">Manager User (ID 3 - John)</option>
-				</select>
-			{/if}
-
-			<div class="lang-switcher">
-				<button class:active={$locale === 'en'} on:click={() => locale.set('en')}>EN</button>
-				<button class:active={$locale === 'fr'} on:click={() => locale.set('fr')}>FR</button>
+		{#if $user}
+			<div class="dropdown">
+				<button class="dropbtn">📊 Views</button>
+				<div class="dropdown-content">
+					{#if $user.role === 'admin'}
+						<a href="/admin/dashboard">🏠 Dashboard</a>
+						<a href="/admin/analytics">📈 Analytics</a>
+						<a href="/users">👥 Users Directory</a>
+						<a href="/requests">📋 All Requests</a>
+						<a href="/admin/audit">📜 Audit Log</a>
+						<a href="/admin/db-explorer">🗃️ Database Explorer</a>
+					{/if}
+					{#if $user.role === 'manager'}
+						<a href="/requests">📋 Service Requests</a>
+						<a href="/users">👥 Users Directory</a>
+					{/if}
+				</div>
 			</div>
-		</div>
+
+			<div class="dropdown">
+				<button class="dropbtn">🛠️ Tools</button>
+				<div class="dropdown-content">
+					{#if $user.role === 'admin'}
+						<a href="/admin/forms">📝 Form Builder</a>
+						<a href="/admin/walkthroughs">📋 Walkthrough Creator</a>
+						<a href="/admin/permissions">📧 Mailbox Permissions</a>
+						<a href="/admin/temp-accounts">👤 TEMP Accounts</a>
+						<a href="/admin/new-user">➕ New AD User</a>
+						<a href="/admin/sql-runner">🗃️ SQL Runner</a>
+						<a href="/admin/initialize">⚙️ Initialize Data</a>
+					{/if}
+					{#if $user.role === 'manager'}
+						<a href="/requests/new">➕ Submit New Request</a>
+						<a href="/shared-mailboxes">📧 Manage Mailboxes</a>
+					{/if}
+				</div>
+			</div>
+		{/if}
 	</nav>
+
+	<div class="controls">
+		{#if $commandQueue.length > 0}
+			<button class="queue-button" on:click={() => showQueueModal = true}>
+				💻 Command Queue ({$commandQueue.length})
+			</button>
+		{/if}
+		{#if $user}
+			<span class="welcome-text">Welcome, {$user.full_name}</span>
+			<button class="logout-btn" on:click={logout}>Logout</button>
+		{:else}
+			<select class="login-select" on:change={handleLoginChange}>
+				<option value="">Login As...</option>
+				<option value="1">Admin User (ID 1)</option>
+				<option value="2">Manager User (ID 2)</option>
+				<option value="3">Manager User (ID 3)</option>
+			</select>
+		{/if}
+	</div>
 </header>
 
 <main>
 	<slot />
 </main>
 
+<!-- Command Queue Modal -->
 {#if showQueueModal}
-	<div class="modal-backdrop" on:click={() => showQueueModal = false}>
-		<div class="modal" on:click|stopPropagation>
-			<h4>Queued PowerShell Commands</h4>
-			<p>Copy the entire script below and run it in your PowerShell console.</p>
-			<textarea readonly rows="10">{$commandQueue.join('\n')}</textarea>
-			<button on:click={clearQueue}>Clear Queue & Close</button>
+	<div class="modal-overlay" on:click={() => showQueueModal = false}>
+		<div class="modal-content" on:click|stopPropagation>
+			<div class="modal-header">
+				<h3>💻 PowerShell Command Queue</h3>
+				<button class="close-btn" on:click={() => showQueueModal = false}>✖</button>
+			</div>
+			<div class="modal-body">
+				{#if $commandQueue.length > 0}
+					<p class="queue-info">📋 {$commandQueue.length} command{$commandQueue.length === 1 ? '' : 's'} ready to execute</p>
+					<textarea readonly rows="12" class="command-display">{$commandQueue.join('\n\n')}</textarea>
+					<div class="modal-actions">
+						<button class="clear-btn" on:click={clearQueue}>🗑️ Clear Queue</button>
+						<button class="copy-btn" on:click={() => navigator.clipboard.writeText($commandQueue.join('\n\n'))}>
+							📋 Copy to Clipboard
+						</button>
+					</div>
+				{:else}
+					<p class="empty-queue">Queue is empty. Commands will appear here when you perform admin actions.</p>
+				{/if}
+			</div>
 		</div>
 	</div>
 {/if}
@@ -123,131 +143,279 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 1.5rem;
-		background-color: white;
-		border-bottom: 1px solid #e2e8f0;
+		padding: 0 1.5rem;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: white;
+		height: 60px;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 	}
+
 	h1 {
-		font-size: 1.25rem;
 		margin: 0;
+		font-size: 1.5rem;
+		font-weight: 600;
 	}
 	nav {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
-		flex-grow: 1; /* Allow nav to grow */
+		gap: 0.5rem;
 	}
 	nav a {
-		color: #4a5568;
 		text-decoration: none;
-		font-weight: bold;
-		padding: 0.5rem;
+		color: white;
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		transition: background-color 0.2s;
 	}
 	nav a:hover {
-		color: #2c5282;
+		background-color: rgba(255, 255, 255, 0.1);
 	}
 	.controls {
 		display: flex;
 		align-items: center;
-		margin-left: auto; /* Push controls to the right */
 		gap: 1rem;
 	}
-	.queue-button {
-		background-color: #e2e8f0;
-		border: 1px solid #cbd5e0;
-		border-radius: 5px;
+
+	.welcome-text {
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 0.9rem;
+	}
+
+	.logout-btn, .queue-button {
+		background: rgba(255, 255, 255, 0.2);
+		color: white;
+		border: 1px solid rgba(255, 255, 255, 0.3);
 		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background-color 0.2s;
+		font-size: 0.9rem;
+		font-weight: bold;
+	}
+
+	.logout-btn:hover, .queue-button:hover {
+		background: rgba(255, 255, 255, 0.3);
+	}
+	.login-select {
+		background: rgba(255, 255, 255, 0.9);
+		color: #333;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
 		cursor: pointer;
 		font-weight: bold;
-		color: #2d3748;
 	}
-	.queue-button:hover {
-		background-color: #cbd5e0;
+
+	/* Dropdown styles */
+	.dropdown {
+		position: relative;
+		display: inline-block;
 	}
-	.lang-switcher {
-		display: flex;
-		gap: 0.25rem;
-	}
-	nav .lang-switcher button {
-		background: none;
-		border: 1px solid transparent;
-		padding: 0.5rem;
+
+	.dropbtn {
+		background-color: transparent;
+		color: white;
+		padding: 0.75rem 1rem;
+		font-size: 0.95rem;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 6px;
 		cursor: pointer;
-		font-weight: bold;
-		color: #4a5568;
+		transition: all 0.2s;
+		font-weight: 500;
 	}
-	nav .lang-switcher button.active {
-		color: #2c5282;
-		border-bottom: 2px solid #2c5282;
+
+	.dropbtn:hover {
+		background-color: rgba(255, 255, 255, 0.1);
+		border-color: rgba(255, 255, 255, 0.3);
 	}
-	.modal-backdrop {
+
+	.dropdown-content {
+		display: none;
+		position: absolute;
+		top: 100%;
+		left: 0;
+		background-color: white;
+		min-width: 220px;
+		box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+		z-index: 1000;
+		border-radius: 8px;
+		border: 1px solid #e2e8f0;
+		overflow: hidden;
+		margin-top: 0.5rem;
+	}
+
+	.dropdown-content a {
+		color: #2d3436 !important;
+		padding: 0.75rem 1rem !important;
+		text-decoration: none;
+		display: block;
+		font-size: 0.9rem;
+		transition: background-color 0.2s;
+		border-bottom: 1px solid #f1f3f4;
+	}
+
+	.dropdown-content a:last-child {
+		border-bottom: none;
+	}
+
+	.dropdown-content a:hover {
+		background-color: #f8f9fa !important;
+		color: #0984e3 !important;
+	}
+
+	.dropdown:hover .dropdown-content {
+		display: block;
+	}
+	/* Modal styles */
+	.modal-overlay {
 		position: fixed;
 		top: 0;
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
+		background: rgba(0, 0, 0, 0.5);
 		display: flex;
 		justify-content: center;
 		align-items: center;
 		z-index: 1000;
 	}
-	.modal {
-		background-color: white;
-		padding: 2rem;
-		border-radius: 5px;
-		width: 80%;
-		max-width: 700px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+	.modal-content {
+		background: white;
+		border-radius: 12px;
+		width: 90%;
+		max-width: 800px;
+		max-height: 80%;
+		box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+		overflow: hidden;
 	}
-	.modal textarea {
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1.5rem;
+		background: #f8f9fa;
+		border-bottom: 1px solid #e2e8f0;
+	}
+
+	.modal-header h3 {
+		margin: 0;
+		color: #2d3436;
+	}
+
+	.close-btn {
+		background: none;
+		border: none;
+		font-size: 1.2rem;
+		cursor: pointer;
+		color: #636e72;
+		padding: 0.25rem;
+	}
+
+	.close-btn:hover {
+		color: #d63031;
+	}
+
+	.modal-body {
+		padding: 1.5rem;
+	}
+
+	.queue-info {
+		background: #e3f2fd;
+		color: #1976d2;
+		padding: 1rem;
+		border-radius: 8px;
+		margin-bottom: 1rem;
+		font-weight: 500;
+	}
+
+	.command-display {
 		width: 100%;
-		font-family: monospace;
-		padding: 0.5rem;
-		border: 1px solid #cbd5e0;
-		border-radius: 3px;
-		margin: 1rem 0;
+		padding: 1rem;
+		border: 1px solid #ddd;
+		border-radius: 8px;
+		font-family: 'Courier New', monospace;
+		font-size: 0.85rem;
+		background: #f8f9fa;
+		resize: vertical;
+		margin-bottom: 1rem;
 	}
-	.modal button {
-		background-color: #2c5282;
+
+	.modal-actions {
+		display: flex;
+		gap: 1rem;
+		justify-content: flex-end;
+	}
+
+	.clear-btn {
+		background: #e74c3c;
 		color: white;
 		border: none;
 		padding: 0.75rem 1.5rem;
-		border-radius: 5px;
+		border-radius: 6px;
 		cursor: pointer;
-		font-weight: bold;
-	}
-	.modal button:hover {
-		background-color: #2a4a7c;
+		font-weight: 500;
 	}
 
-	/* Authentication styling */
-	.auth-button {
-		background-color: #e53e3e;
+	.clear-btn:hover {
+		background: #c0392b;
+	}
+
+	.copy-btn {
+		background: #0984e3;
 		color: white;
 		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 5px;
+		padding: 0.75rem 1.5rem;
+		border-radius: 6px;
 		cursor: pointer;
-		font-weight: bold;
-		margin-left: 0.5rem;
-	}
-	.auth-button:hover {
-		background-color: #c53030;
+		font-weight: 500;
 	}
 
-	.login-select {
-		padding: 0.5rem;
-		border: 1px solid #cbd5e0;
-		border-radius: 5px;
-		background-color: white;
-		cursor: pointer;
-		font-weight: bold;
+	.copy-btn:hover {
+		background: #0770d4;
 	}
 
-	.controls span {
-		color: #2d3748;
-		font-weight: bold;
-		margin-right: 0.5rem;
+	.empty-queue {
+		text-align: center;
+		color: #636e72;
+		font-style: italic;
+		padding: 2rem;
+	}
+
+	main {
+		flex: 1;
+		padding: 2rem;
+		background: #f8f9fa;
+		min-height: calc(100vh - 60px);
+	}
+
+	@media (max-width: 768px) {
+		header {
+			flex-direction: column;
+			height: auto;
+			padding: 1rem;
+		}
+
+		nav {
+			margin: 1rem 0;
+		}
+
+		.dropdown-content {
+			position: static;
+			display: block;
+			box-shadow: none;
+			background: rgba(255, 255, 255, 0.1);
+			margin-top: 0.5rem;
+		}
+
+		.dropdown-content a {
+			color: white !important;
+		}
+
+		.modal-content {
+			width: 95%;
+			margin: 1rem;
+		}
 	}
 </style>
