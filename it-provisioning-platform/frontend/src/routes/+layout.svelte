@@ -108,7 +108,7 @@
 						{/if}
 						{#if $user.role === 'manager'}
 							<a href="/requests/new">➕ Submit New Request</a>
-							<a href="/shared-mailboxes">📧 Manage Mailboxes</a>
+							<a href="/mailboxes">📧 Manage Mailboxes</a>
 						{/if}
 					</div>
 				{/if}
