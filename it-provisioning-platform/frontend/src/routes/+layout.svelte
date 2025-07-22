@@ -6,6 +6,8 @@
 	import { onMount } from 'svelte';
 
 	let showQueueModal = false;
+	let showViewsDropdown = false;
+	let showToolsDropdown = false;
 
 	// Set default locale immediately
 	locale.set('en');
@@ -39,6 +41,24 @@
 		// Reset the select to show placeholder
 		event.target.selectedIndex = 0;
 	}
+
+	function toggleViewsDropdown() {
+		showViewsDropdown = !showViewsDropdown;
+		showToolsDropdown = false; // Close other dropdown
+	}
+
+	function toggleToolsDropdown() {
+		showToolsDropdown = !showToolsDropdown;
+		showViewsDropdown = false; // Close other dropdown
+	}
+
+	// Close dropdowns when clicking outside
+	function handleOutsideClick(event) {
+		if (!event.target.closest('.dropdown')) {
+			showViewsDropdown = false;
+			showToolsDropdown = false;
+		}
+	}
 </script>
 
 <header>
@@ -50,40 +70,48 @@
 
 		{#if $user}
 			<div class="dropdown">
-				<button class="dropbtn">📊 Views</button>
-				<div class="dropdown-content">
-					{#if $user.role === 'admin'}
-						<a href="/admin/dashboard">🏠 Dashboard</a>
-						<a href="/admin/analytics">📈 Analytics</a>
-						<a href="/users">👥 Users Directory</a>
-						<a href="/requests">📋 All Requests</a>
-						<a href="/admin/audit">📜 Audit Log</a>
-						<a href="/admin/db-explorer">🗃️ Database Explorer</a>
-					{/if}
-					{#if $user.role === 'manager'}
-						<a href="/requests">📋 Service Requests</a>
-						<a href="/users">👥 Users Directory</a>
-					{/if}
-				</div>
+				<button class="dropbtn" class:active={showViewsDropdown} on:click={toggleViewsDropdown}>
+					📊 Views {showViewsDropdown ? '▲' : '▼'}
+				</button>
+				{#if showViewsDropdown}
+					<div class="dropdown-content">
+						{#if $user.role === 'admin'}
+							<a href="/admin/dashboard">🏠 Dashboard</a>
+							<a href="/admin/analytics">📈 Analytics</a>
+							<a href="/users">👥 Users Directory</a>
+							<a href="/requests">📋 All Requests</a>
+							<a href="/admin/audit">📜 Audit Log</a>
+							<a href="/admin/db-explorer">🗃️ Database Explorer</a>
+						{/if}
+						{#if $user.role === 'manager'}
+							<a href="/requests">📋 Service Requests</a>
+							<a href="/users">👥 Users Directory</a>
+						{/if}
+					</div>
+				{/if}
 			</div>
 
 			<div class="dropdown">
-				<button class="dropbtn">🛠️ Tools</button>
-				<div class="dropdown-content">
-					{#if $user.role === 'admin'}
-						<a href="/admin/forms">📝 Form Builder</a>
-						<a href="/admin/walkthroughs">📋 Walkthrough Creator</a>
-						<a href="/admin/permissions">📧 Mailbox Permissions</a>
-						<a href="/admin/temp-accounts">👤 TEMP Accounts</a>
-						<a href="/admin/new-user">➕ New AD User</a>
-						<a href="/admin/sql-runner">🗃️ SQL Runner</a>
-						<a href="/admin/initialize">⚙️ Initialize Data</a>
-					{/if}
-					{#if $user.role === 'manager'}
-						<a href="/requests/new">➕ Submit New Request</a>
-						<a href="/shared-mailboxes">📧 Manage Mailboxes</a>
-					{/if}
-				</div>
+				<button class="dropbtn" class:active={showToolsDropdown} on:click={toggleToolsDropdown}>
+					🛠️ Tools {showToolsDropdown ? '▲' : '▼'}
+				</button>
+				{#if showToolsDropdown}
+					<div class="dropdown-content">
+						{#if $user.role === 'admin'}
+							<a href="/admin/forms">📝 Form Builder</a>
+							<a href="/admin/walkthroughs">📋 Walkthrough Creator</a>
+							<a href="/admin/permissions">📧 Mailbox Permissions</a>
+							<a href="/admin/temp-accounts">👤 TEMP Accounts</a>
+							<a href="/admin/new-user">➕ New AD User</a>
+							<a href="/admin/sql-runner">🗃️ SQL Runner</a>
+							<a href="/admin/initialize">⚙️ Initialize Data</a>
+						{/if}
+						{#if $user.role === 'manager'}
+							<a href="/requests/new">➕ Submit New Request</a>
+							<a href="/shared-mailboxes">📧 Manage Mailboxes</a>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</nav>
@@ -107,6 +135,9 @@
 		{/if}
 	</div>
 </header>
+
+<!-- Click outside handler -->
+<svelte:window on:click={handleOutsideClick} />
 
 <main>
 	<slot />
@@ -155,11 +186,13 @@
 		font-size: 1.5rem;
 		font-weight: 600;
 	}
+
 	nav {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 	}
+
 	nav a {
 		text-decoration: none;
 		color: white;
@@ -167,9 +200,11 @@
 		border-radius: 6px;
 		transition: background-color 0.2s;
 	}
+
 	nav a:hover {
 		background-color: rgba(255, 255, 255, 0.1);
 	}
+
 	.controls {
 		display: flex;
 		align-items: center;
@@ -196,6 +231,7 @@
 	.logout-btn:hover, .queue-button:hover {
 		background: rgba(255, 255, 255, 0.3);
 	}
+
 	.login-select {
 		background: rgba(255, 255, 255, 0.9);
 		color: #333;
@@ -206,7 +242,7 @@
 		font-weight: bold;
 	}
 
-	/* Dropdown styles */
+	/* --- Dropdown Styles --- */
 	.dropdown {
 		position: relative;
 		display: inline-block;
@@ -220,19 +256,23 @@
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 6px;
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: all 0.2s ease-in-out;
 		font-weight: 500;
 	}
 
-	.dropbtn:hover {
+	.dropbtn:hover, .dropbtn.active {
 		background-color: rgba(255, 255, 255, 0.1);
 		border-color: rgba(255, 255, 255, 0.3);
 	}
 
 	.dropdown-content {
-		display: none;
+		/* Start hidden and out of the way */
+		opacity: 0;
+		transform: translateY(-10px);
+		
+		/* Positioning */
 		position: absolute;
-		top: 100%;
+		top: 100%; /* Position directly below the button */
 		left: 0;
 		background-color: white;
 		min-width: 220px;
@@ -242,6 +282,9 @@
 		border: 1px solid #e2e8f0;
 		overflow: hidden;
 		margin-top: 0.5rem;
+		
+		/* Animation will be triggered by conditional rendering */
+		animation: liquidDrop 0.4s ease-out forwards;
 	}
 
 	.dropdown-content a {
@@ -263,9 +306,21 @@
 		color: #0984e3 !important;
 	}
 
-	.dropdown:hover .dropdown-content {
-		display: block;
+	/* The Liquid Drop Animation */
+	@keyframes liquidDrop {
+		0% {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		70% {
+			transform: translateY(5px);
+		}
+		100% {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
+
 	/* Modal styles */
 	.modal-overlay {
 		position: fixed;
@@ -403,7 +458,6 @@
 
 		.dropdown-content {
 			position: static;
-			display: block;
 			box-shadow: none;
 			background: rgba(255, 255, 255, 0.1);
 			margin-top: 0.5rem;
